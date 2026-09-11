@@ -1,9 +1,10 @@
-﻿import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import Batches from "./pages/Batches";
 import Events from "./pages/Events";
 import Alumni from "./pages/Alumni";
 import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
         <Route path="/alumni" element={<Alumni />} />
         <Route path="/events" element={<Events />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
     </BrowserRouter>
   );
