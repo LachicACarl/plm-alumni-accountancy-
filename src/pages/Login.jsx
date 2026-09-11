@@ -1,13 +1,22 @@
 ﻿import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Eye, EyeOff, GraduationCap, Lock, Mail } from "lucide-react";
+import {
+  ArrowLeft,
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  UserRound,
+} from "lucide-react";
+import plmCampus from "../assets/plm-campus.jpg";
+import plmLogo from "../../assets/plm-accountancy-logo.svg";
 
 export default function Login() {
   const navigate = useNavigate();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [remember, setRemember] = useState(true);
+  const [remember, setRemember] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 
@@ -29,10 +38,7 @@ export default function Login() {
     }
 
     localStorage.setItem("alumniLoggedIn", "true");
-    localStorage.setItem(
-      "alumniUser",
-      username.trim()
-    );
+    localStorage.setItem("alumniUser", username.trim());
 
     if (remember) {
       localStorage.setItem("alumniRemembered", "true");
@@ -60,192 +66,240 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f5ee]">
-      <div className="grid min-h-screen lg:grid-cols-2">
-        <section className="hidden bg-[#18392b] p-10 text-white lg:flex lg:flex-col lg:justify-between">
-          <Link
-            to="/"
-            className="flex w-fit items-center gap-2 text-sm text-white/80 transition hover:text-[#d4af37]"
-          >
-            <ArrowLeft size={18} />
-            Back to Website
+    <div className="relative min-h-screen overflow-hidden bg-[#f7f8f2]">
+      {/* Campus Background */}
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: `url(${plmCampus})` }}
+      />
+
+      {/* Soft Screenshot-Like Overlay */}
+      <div className="absolute inset-0 bg-white/75" />
+      <div className="absolute inset-0 bg-gradient-to-br from-[#dff7df]/85 via-white/70 to-[#f8e8b1]/70" />
+      <div className="absolute inset-0 backdrop-blur-[1px]" />
+
+      {/* Content */}
+      <div className="relative z-10 min-h-screen">
+        {/* Top Branding */}
+        <header className="px-6 py-5 sm:px-10 lg:px-12">
+          <Link to="/" className="inline-flex items-center gap-4">
+            <img
+              src={plmLogo}
+              alt="PLM College of Accountancy"
+              className="h-16 w-auto object-contain sm:h-20"
+            />
+
+            <div className="hidden border-l border-[#18392b]/20 pl-4 sm:block">
+              <p className="text-xs font-semibold tracking-[0.18em] text-[#18392b]/70">
+                PAMANTASAN NG LUNGSOD NG MAYNILA
+              </p>
+              <p className="mt-1 text-sm font-bold tracking-wide text-[#b08b20]">
+                COLLEGE OF ACCOUNTANCY
+              </p>
+            </div>
           </Link>
+        </header>
 
-          <div className="mx-auto max-w-lg">
-            <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#d4af37] text-[#18392b]">
-              <GraduationCap size={42} />
-            </div>
+        <main className="mx-auto flex min-h-[calc(100vh-110px)] max-w-[1500px] items-center px-6 pb-10 sm:px-10 lg:px-16">
+          <div className="grid w-full items-center gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
+            {/* Left Branding */}
+            <section className="hidden lg:block">
+              <div className="max-w-3xl">
+                <div className="flex items-center">
+                  <div className="pr-7">
+                    <h1 className="text-[7rem] font-black leading-[0.82] tracking-[-0.06em] text-transparent bg-clip-text bg-gradient-to-b from-[#d9b93e] via-[#a9bd68] to-[#6b9d72] xl:text-[8.5rem]">
+                      BSA
+                    </h1>
+                  </div>
 
-            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-[#d4af37]">
-              PLM College of Accountancy
-            </p>
+                  <div className="h-36 w-[3px] bg-[#8c7540]" />
 
-            <h1 className="font-serif text-5xl font-bold leading-tight">
-              BSA Alumni System
-            </h1>
+                  <div className="pl-8">
+                    <p className="text-[4.3rem] font-black leading-[0.9] tracking-[-0.04em] text-[#28583e] xl:text-[5.3rem]">
+                      ALUMNI
+                    </p>
 
-            <p className="mt-5 max-w-md text-base leading-7 text-white/70">
-              Stay connected with the College of Accountancy alumni community,
-              manage your credentials, achievements, batch information, and
-              alumni events.
-            </p>
-          </div>
-
-          <p className="text-xs text-white/40">
-            Pamantasan ng Lungsod ng Maynila
-          </p>
-        </section>
-
-        <section className="flex items-center justify-center px-6 py-10">
-          <div className="w-full max-w-md">
-            <Link
-              to="/"
-              className="mb-8 flex w-fit items-center gap-2 text-sm text-[#18392b] lg:hidden"
-            >
-              <ArrowLeft size={18} />
-              Back to Website
-            </Link>
-
-            <div className="mb-8 text-center">
-              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#18392b] text-[#d4af37]">
-                <GraduationCap size={32} />
-              </div>
-
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#9a7b16]">
-                PLM College of Accountancy
-              </p>
-
-              <h2 className="mt-2 font-serif text-3xl font-bold text-[#18392b]">
-                Welcome Back
-              </h2>
-
-              <p className="mt-2 text-sm text-slate-500">
-                Sign in to your BSA Alumni account
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-[#ddd7c8] bg-white p-7 shadow-sm">
-              <button
-                type="button"
-                onClick={handleGoogleLogin}
-                className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#d8d2c2] px-4 py-3 text-sm font-semibold text-[#18392b] transition hover:bg-[#f7f5ee]"
-              >
-                <span className="text-lg font-bold">G</span>
-                Continue with Google
-              </button>
-
-              <div className="my-6 flex items-center gap-4">
-                <div className="h-px flex-1 bg-[#e5e0d5]" />
-                <span className="text-xs text-slate-400">OR</span>
-                <div className="h-px flex-1 bg-[#e5e0d5]" />
-              </div>
-
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-[#18392b]">
-                    Username or Email
-                  </label>
-
-                  <div className="relative">
-                    <Mail
-                      size={18}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                    />
-
-                    <input
-                      type="text"
-                      value={username}
-                      onChange={(event) => setUsername(event.target.value)}
-                      placeholder="Enter your username or email"
-                      className="w-full rounded-xl border border-[#d8d2c2] py-3 pl-10 pr-4 text-sm outline-none transition focus:border-[#18392b] focus:ring-2 focus:ring-[#18392b]/10"
-                    />
+                    <p className="text-[4.3rem] font-black leading-[0.9] tracking-[-0.04em] text-[#d6b44a] xl:text-[5.3rem]">
+                      SYSTEM
+                    </p>
                   </div>
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-[#18392b]">
-                    Password
-                  </label>
+                <p className="mt-9 max-w-2xl font-serif text-2xl font-semibold leading-[1.35] text-[#65756e] xl:text-3xl">
+                  Strengthening connections.
+                  <br />
+                  Honoring our legacy.
+                  <br />
+                  Building the future together.
+                </p>
+              </div>
+            </section>
 
-                  <div className="relative">
-                    <Lock
-                      size={18}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+            {/* Login Card */}
+            <section className="flex justify-center lg:justify-end">
+              <div className="w-full max-w-[500px]">
+                <div className="rounded-2xl border border-[#9da99f]/50 bg-white/60 p-7 shadow-[0_20px_70px_rgba(24,57,43,0.12)] backdrop-blur-xl sm:p-9">
+                  {/* Mobile Logo */}
+                  <div className="mb-6 flex justify-center lg:hidden">
+                    <img
+                      src={plmLogo}
+                      alt="PLM College of Accountancy"
+                      className="h-20 w-auto"
                     />
+                  </div>
 
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(event) => setPassword(event.target.value)}
-                      placeholder="Enter your password"
-                      className="w-full rounded-xl border border-[#d8d2c2] py-3 pl-10 pr-11 text-sm outline-none transition focus:border-[#18392b] focus:ring-2 focus:ring-[#18392b]/10"
-                    />
+                  {/* Login Heading */}
+                  <div className="text-center">
+                    <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#dcefdc] to-[#eef7e9] text-[#579269] shadow-inner">
+                      <UserRound size={31} strokeWidth={1.7} />
+                    </div>
+
+                    <h2 className="font-serif text-3xl font-medium text-[#202820] sm:text-4xl">
+                      Log in to your account
+                    </h2>
+
+                    <p className="mt-1 text-sm text-[#879087]">
+                      Enter your details to login
+                    </p>
+                  </div>
+
+                  {/* Google */}
+                  <button
+                    type="button"
+                    onClick={handleGoogleLogin}
+                    className="mt-7 flex w-full items-center justify-center gap-3 rounded-xl border border-[#aeb5ad] bg-white/70 px-5 py-3.5 text-sm font-medium text-[#424a43] transition hover:bg-white hover:shadow-md"
+                  >
+                    <span className="text-lg font-bold text-[#4285F4]">
+                      G
+                    </span>
+                    Continue with Google
+                  </button>
+
+                  {/* Divider */}
+                  <div className="my-6 flex items-center gap-4">
+                    <div className="h-px flex-1 bg-[#b8beb8]" />
+                    <span className="text-xs text-[#858c85]">OR</span>
+                    <div className="h-px flex-1 bg-[#b8beb8]" />
+                  </div>
+
+                  <form onSubmit={handleSubmit} className="space-y-5">
+                    {/* Username */}
+                    <div className="relative">
+                      <UserRound
+                        size={18}
+                        strokeWidth={1.5}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 text-[#667068]"
+                      />
+
+                      <input
+                        type="text"
+                        value={username}
+                        onChange={(event) => setUsername(event.target.value)}
+                        placeholder="Username"
+                        className="h-14 w-full rounded-xl border border-[#9fa79f] bg-white/65 pl-12 pr-4 text-sm text-[#263129] outline-none transition placeholder:text-[#697169] focus:border-[#5d906b] focus:bg-white/85 focus:ring-2 focus:ring-[#5d906b]/15"
+                      />
+                    </div>
+
+                    {/* Password */}
+                    <div className="relative">
+                      <Lock
+                        size={18}
+                        strokeWidth={1.5}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 text-[#667068]"
+                      />
+
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                        placeholder="Password"
+                        className="h-14 w-full rounded-xl border border-[#9fa79f] bg-white/65 pl-12 pr-12 text-sm text-[#263129] outline-none transition placeholder:text-[#697169] focus:border-[#5d906b] focus:bg-white/85 focus:ring-2 focus:ring-[#5d906b]/15"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-[#707970] transition hover:text-[#28583e]"
+                        aria-label={
+                          showPassword ? "Hide password" : "Show password"
+                        }
+                      >
+                        {showPassword ? (
+                          <EyeOff size={18} />
+                        ) : (
+                          <Eye size={18} />
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Options */}
+                    <div className="flex items-center justify-between gap-4">
+                      <label className="flex items-center gap-2 text-xs text-[#656d66] sm:text-sm">
+                        <input
+                          type="checkbox"
+                          checked={remember}
+                          onChange={(event) =>
+                            setRemember(event.target.checked)
+                          }
+                          className="h-4 w-4 accent-[#578d68]"
+                        />
+                        Remember me
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={handleForgotPassword}
+                        className="text-xs font-medium text-[#6c746d] transition hover:text-[#a27e19] sm:text-sm"
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
+
+                    {/* Error */}
+                    {error && (
+                      <div className="rounded-xl border border-[#dfc979] bg-[#fff8dc] px-4 py-3 text-sm text-[#765d10]">
+                        {error}
+                      </div>
+                    )}
+
+                    {/* Login */}
+                    <button
+                      type="submit"
+                      className="h-14 w-full rounded-xl bg-gradient-to-r from-[#e0bc4c] via-[#a8ba67] to-[#62a375] text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5 hover:shadow-lg"
+                    >
+                      Log In
+                    </button>
+                  </form>
+
+                  {/* Register */}
+                  <div className="mt-5 text-center">
+                    <p className="text-xs text-[#7c847d]">
+                      Don't have an account?
+                    </p>
 
                     <button
                       type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#18392b]"
-                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      onClick={handleRegister}
+                      className="mt-1 text-xs font-semibold text-[#a08021] transition hover:text-[#28583e]"
                     >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      Contact administrator
                     </button>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between gap-4">
-                  <label className="flex items-center gap-2 text-sm text-slate-600">
-                    <input
-                      type="checkbox"
-                      checked={remember}
-                      onChange={(event) => setRemember(event.target.checked)}
-                      className="h-4 w-4 accent-[#18392b]"
-                    />
-                    Remember me
-                  </label>
-
-                  <button
-                    type="button"
-                    onClick={handleForgotPassword}
-                    className="text-sm font-semibold text-[#18392b] hover:text-[#9a7b16]"
+                <div className="mt-4 text-center">
+                  <Link
+                    to="/"
+                    className="inline-flex items-center gap-2 text-xs text-[#5f6961] transition hover:text-[#28583e]"
                   >
-                    Forgot password?
-                  </button>
+                    <ArrowLeft size={14} />
+                    Back to Website
+                  </Link>
                 </div>
-
-                {error && (
-                  <div className="rounded-xl bg-[#fff7df] px-4 py-3 text-sm text-[#765d10]">
-                    {error}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  className="w-full rounded-xl bg-[#18392b] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#24533d]"
-                >
-                  Sign In
-                </button>
-              </form>
-
-              <div className="mt-6 border-t border-[#eee9df] pt-6 text-center">
-                <p className="text-sm text-slate-500">
-                  Don't have an account?
-                </p>
-
-                <button
-                  type="button"
-                  onClick={handleRegister}
-                  className="mt-1 text-sm font-bold text-[#18392b] hover:text-[#9a7b16]"
-                >
-                  Register as Alumni
-                </button>
               </div>
-            </div>
-
-            <p className="mt-6 text-center text-xs text-slate-400">
-              BSA Alumni System • PLM College of Accountancy
-            </p>
+            </section>
           </div>
-        </section>
+        </main>
       </div>
     </div>
   );

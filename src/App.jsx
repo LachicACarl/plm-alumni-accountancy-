@@ -4,13 +4,18 @@ import Batches from "./pages/Batches";
 import Events from "./pages/Events";
 import Alumni from "./pages/Alumni";
 import Login from "./pages/Login";
+import AdminLogin from "./pages/AdminLogin";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import Credentials from "./pages/Credentials";
 import Achievements from "./pages/Achievements";
 import Batch from "./pages/Batch";
 import DashboardEvents from "./pages/DashboardEvents";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminAlumni from "./pages/AdminAlumni";
+import AdminCredentials from "./pages/AdminCredentials";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AdminProtectedRoute from "./components/AdminProtectedRoute";
 
 export default function App() {
   return (
@@ -20,7 +25,9 @@ export default function App() {
         <Route path="/batches" element={<Batches />} />
         <Route path="/alumni" element={<Alumni />} />
         <Route path="/events" element={<Events />} />
+
         <Route path="/login" element={<Login />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
 
         <Route
           path="/dashboard"
@@ -73,6 +80,33 @@ export default function App() {
             <ProtectedRoute>
               <DashboardEvents />
             </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboard />
+            </AdminProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/alumni"
+          element={
+            <AdminProtectedRoute>
+              <AdminAlumni />
+            </AdminProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/credentials"
+          element={
+            <AdminProtectedRoute>
+              <AdminCredentials />
+            </AdminProtectedRoute>
           }
         />
       </Routes>
