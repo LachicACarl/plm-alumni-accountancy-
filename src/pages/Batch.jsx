@@ -1,4 +1,4 @@
-﻿import { Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   ArrowLeft,
   Award,
@@ -54,10 +54,10 @@ export default function Batch() {
       .join("");
 
   return (
-    <div className="min-h-screen bg-[#f7f5ee]">
+    <div className="min-h-screen bg-[#f7f5ee] lg:flex">
       <DashboardSidebar />
 
-      <main className="min-h-screen lg:pl-72">
+      <main className="min-w-0 flex-1">
         {/* Header */}
         <header className="border-b border-[#ddd7c8] bg-white px-6 py-5 lg:px-8">
           <div className="mx-auto max-w-7xl">
