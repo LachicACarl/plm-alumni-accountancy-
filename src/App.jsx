@@ -1,4 +1,4 @@
-﻿import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import Batches from "./pages/Batches";
 import Events from "./pages/Events";
@@ -14,6 +14,8 @@ import DashboardEvents from "./pages/DashboardEvents";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminAlumni from "./pages/AdminAlumni";
 import AdminCredentials from "./pages/AdminCredentials";
+import AdminEvents from "./pages/AdminEvents";
+import AdminBatches from "./pages/AdminBatches";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
 
@@ -97,6 +99,24 @@ export default function App() {
           element={
             <AdminProtectedRoute>
               <AdminAlumni />
+            </AdminProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/events"
+          element={
+            <AdminProtectedRoute>
+              <AdminEvents />
+            </AdminProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/batches"
+          element={
+            <AdminProtectedRoute>
+              <AdminBatches />
             </AdminProtectedRoute>
           }
         />
