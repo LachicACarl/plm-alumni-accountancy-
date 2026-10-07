@@ -1,3 +1,4 @@
+﻿import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -11,55 +12,100 @@ import {
   UserRound,
 } from "lucide-react";
 import DashboardSidebar from "../components/DashboardSidebar";
+import { supabase } from "../lib/supabase";
 
 export default function Batch() {
-  const members = [
-    {
-      name: "Maria Santos",
-      role: "Certified Public Accountant",
-      company: "Santos & Associates",
-    },
-    {
-      name: "John Reyes",
-      role: "Financial Analyst",
-      company: "Metro Finance Corp.",
-    },
-    {
-      name: "Angela Cruz",
-      role: "Audit Associate",
-      company: "SGV & Co.",
-    },
-    {
-      name: "Carlos Mendoza",
-      role: "Accountant",
-      company: "Mendoza Accounting Services",
-    },
-    {
-      name: "Sofia Garcia",
-      role: "Tax Consultant",
-      company: "Garcia Tax Solutions",
-    },
-    {
-      name: "Daniel Flores",
-      role: "Internal Auditor",
-      company: "PLM Alumni Corporation",
-    },
-  ];
+  const [profile, setProfile] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function loadBatch() {
+      setLoading(true);
+      setError("");
+
+      try {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError) throw userError;
+
+        if (!user) {
+          throw new Error("No authenticated user found.");
+        }
+
+        const { data: currentProfile, error: profileError } =
+          await supabase
+            .from("profiles")
+            .select(
+              "id, first_name, middle_name, last_name, graduation_year"
+            )
+            .eq("id", user.id)
+            .single();
+
+        if (profileError) throw profileError;
+
+        setProfile(currentProfile);
+
+        const graduationYear = currentProfile.graduation_year;
+
+        if (!graduationYear) {
+          setMembers([]);
+          return;
+        }
+
+        const { data: batchMembers, error: membersError } =
+          await supabase
+            .from("profiles")
+            .select(
+              "id, first_name, middle_name, last_name, graduation_year, profession, company, profile_image_url"
+            )
+            .eq("role", "alumni")
+            .eq("graduation_year", graduationYear)
+            .order("last_name", { ascending: true });
+
+        if (membersError) throw membersError;
+
+        setMembers(batchMembers ?? []);
+      } catch (err) {
+        console.error("Failed to load batch:", err);
+        setError(err.message || "Unable to load batch information.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadBatch();
+  }, []);
+
+  const batchYear = profile?.graduation_year || "—";
+
+  const fullName = (member) =>
+    [member.first_name, member.middle_name, member.last_name]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
 
   const initials = (name) =>
     name
       .split(" ")
+      .filter(Boolean)
       .map((part) => part[0])
       .slice(0, 2)
-      .join("");
+      .join("")
+      .toUpperCase();
+
+  const currentUserId = profile?.id;
 
   return (
-    <div className="min-h-screen bg-[#f7f5ee] lg:flex">
+    <div className="min-h-screen bg-[#f7f5ee] text-[#18392b] lg:flex">
       <DashboardSidebar />
 
       <main className="min-w-0 flex-1">
-        {/* Header */}
-        <header className="border-b border-[#ddd7c8] bg-white px-6 py-5 lg:px-8">
+        <header className="border-b border-[#ddd7c8] bg-white px-5 py-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <Link
               to="/dashboard"
@@ -78,14 +124,13 @@ export default function Batch() {
             </h1>
 
             <p className="mt-1 max-w-2xl text-sm text-gray-500">
-              Connect with your fellow BSA Batch 2025 alumni and stay connected
-              with your graduating community.
+              Connect with your fellow BSA Batch {batchYear} alumni and stay
+              connected with your graduating community.
             </p>
           </div>
         </header>
 
-        <div className="mx-auto max-w-6xl px-6 py-8 lg:px-8 lg:py-10">
-          {/* Batch Hero */}
+        <div className="mx-auto max-w-7xl px-5 py-6 sm:px-6 lg:px-8 lg:py-7">
           <section className="relative overflow-hidden rounded-3xl bg-[#18392b] text-white shadow-sm">
             <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full border border-white/10" />
             <div className="absolute -bottom-32 right-20 h-64 w-64 rounded-full border border-[#d4af37]/20" />
@@ -98,7 +143,7 @@ export default function Batch() {
                   </p>
 
                   <h2 className="mt-2 font-serif text-6xl font-bold tracking-tight">
-                    2025
+                    {batchYear}
                   </h2>
 
                   <p className="mt-3 max-w-xl text-sm leading-6 text-white/65">
@@ -109,12 +154,12 @@ export default function Batch() {
                   <div className="mt-6 flex flex-wrap gap-x-6 gap-y-3 text-sm text-white/70">
                     <span className="inline-flex items-center gap-2">
                       <Users size={16} className="text-[#d4af37]" />
-                      68 Alumni
+                      {members.length} Alumni
                     </span>
 
                     <span className="inline-flex items-center gap-2">
                       <CalendarDays size={16} className="text-[#d4af37]" />
-                      Graduated May 2025
+                      Batch {batchYear}
                     </span>
 
                     <span className="inline-flex items-center gap-2">
@@ -134,13 +179,13 @@ export default function Batch() {
               <div className="p-5 lg:px-7">
                 <div className="flex items-center gap-3">
                   <Users size={18} className="text-[#d4af37]" />
-
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-white/45">
                       Members
                     </p>
-
-                    <p className="mt-1 font-serif text-2xl font-bold">68</p>
+                    <p className="mt-1 font-serif text-2xl font-bold">
+                      {members.length}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -148,13 +193,13 @@ export default function Batch() {
               <div className="border-t border-white/10 p-5 sm:border-l sm:border-t-0 lg:px-7">
                 <div className="flex items-center gap-3">
                   <Trophy size={18} className="text-[#d4af37]" />
-
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-white/45">
-                      CPA Passers
+                      Batch
                     </p>
-
-                    <p className="mt-1 font-serif text-2xl font-bold">24</p>
+                    <p className="mt-1 font-serif text-2xl font-bold">
+                      {batchYear}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -162,20 +207,25 @@ export default function Batch() {
               <div className="border-t border-white/10 p-5 sm:border-l sm:border-t-0 lg:px-7">
                 <div className="flex items-center gap-3">
                   <UserRound size={18} className="text-[#d4af37]" />
-
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-white/45">
-                      Active Alumni
+                      Your Status
                     </p>
-
-                    <p className="mt-1 font-serif text-2xl font-bold">61</p>
+                    <p className="mt-1 font-serif text-2xl font-bold">
+                      Active
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* Batch Overview */}
+          {error && (
+            <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
           <section className="mt-8 grid gap-5 lg:grid-cols-[1.4fr_1fr]">
             <div className="rounded-3xl border border-[#ddd7c8] bg-white p-6 shadow-sm lg:p-7">
               <div className="flex items-start gap-4">
@@ -189,13 +239,13 @@ export default function Batch() {
                   </p>
 
                   <h2 className="mt-1 font-serif text-2xl font-bold text-[#18392b]">
-                    BSA Batch 2025
+                    BSA Batch {batchYear}
                   </h2>
 
                   <p className="mt-3 text-sm leading-7 text-gray-500">
                     Your batch connects graduates from the PLM College of
                     Accountancy who completed the Bachelor of Science in
-                    Accountancy program in 2025.
+                    Accountancy program in {batchYear}.
                   </p>
                 </div>
               </div>
@@ -203,17 +253,16 @@ export default function Batch() {
 
             <div className="rounded-3xl border border-[#ddd7c8] bg-[#fbfaf6] p-6 shadow-sm lg:p-7">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#b28b1e]">
-                Batch Highlights
+                Batch Information
               </p>
 
               <div className="mt-4 space-y-3">
                 <div className="flex items-center gap-3">
                   <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#18392b]">
-                    <Award size={17} />
+                    <Users size={17} />
                   </span>
-
                   <span className="text-sm font-medium text-gray-600">
-                    24 CPA passers
+                    {members.length} registered alumni
                   </span>
                 </div>
 
@@ -221,7 +270,6 @@ export default function Batch() {
                   <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#18392b]">
                     <BriefcaseBusiness size={17} />
                   </span>
-
                   <span className="text-sm font-medium text-gray-600">
                     Professional alumni network
                   </span>
@@ -229,18 +277,16 @@ export default function Batch() {
 
                 <div className="flex items-center gap-3">
                   <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#18392b]">
-                    <Users size={17} />
+                    <Award size={17} />
                   </span>
-
                   <span className="text-sm font-medium text-gray-600">
-                    61 active alumni
+                    PLM BSA Alumni Community
                   </span>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* Members */}
           <section className="mt-9">
             <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
@@ -258,67 +304,102 @@ export default function Batch() {
               </div>
 
               <span className="text-sm font-medium text-gray-500">
-                Showing 6 of 68 alumni
+                {loading
+                  ? "Loading alumni..."
+                  : `Showing ${members.length} alumni`}
               </span>
             </div>
 
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-              {members.map((member, index) => (
-                <article
-                  key={member.name}
-                  className="group overflow-hidden rounded-3xl border border-[#ddd7c8] bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-md"
-                >
-                  <div className="h-1.5 bg-gradient-to-r from-[#d4af37] to-[#18392b]" />
+            {loading ? (
+              <div className="rounded-3xl border border-[#ddd7c8] bg-white p-10 text-center shadow-sm">
+                <p className="text-sm font-medium text-gray-500">
+                  Loading your batch members...
+                </p>
+              </div>
+            ) : members.length === 0 ? (
+              <div className="rounded-3xl border border-[#ddd7c8] bg-white p-10 text-center shadow-sm">
+                <Users
+                  size={34}
+                  className="mx-auto text-[#b28b1e]"
+                />
+                <h3 className="mt-4 font-serif text-xl font-bold text-[#18392b]">
+                  No batch members yet
+                </h3>
+                <p className="mt-2 text-sm text-gray-500">
+                  No alumni profiles were found for Batch {batchYear}.
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                {members.map((member) => {
+                  const name = fullName(member);
+                  const isCurrentUser = member.id === currentUserId;
 
-                  <div className="p-5">
-                    <div className="flex items-center gap-4">
-                      <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#eee9dc] font-serif text-lg font-bold text-[#18392b]">
-                        {initials(member.name)}
-                      </div>
+                  return (
+                    <article
+                      key={member.id}
+                      className="group overflow-hidden rounded-3xl border border-[#ddd7c8] bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-md"
+                    >
+                      <div className="h-1.5 bg-gradient-to-r from-[#d4af37] to-[#18392b]" />
 
-                      <div className="min-w-0">
-                        <h3 className="truncate font-serif text-lg font-bold text-[#18392b]">
-                          {member.name}
-                        </h3>
+                      <div className="p-5">
+                        <div className="flex items-center gap-4">
+                          <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#eee9dc] font-serif text-lg font-bold text-[#18392b]">
+                            {member.profile_image_url ? (
+                              <img
+                                src={member.profile_image_url}
+                                alt={name}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              initials(name)
+                            )}
+                          </div>
 
-                        <span className="mt-1 inline-flex rounded-full bg-[#f7f5ee] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#8b806b]">
-                          BSA Batch 2025
-                        </span>
-                      </div>
-                    </div>
+                          <div className="min-w-0">
+                            <h3 className="truncate font-serif text-lg font-bold text-[#18392b]">
+                              {name}
+                            </h3>
 
-                    <div className="mt-5 border-t border-[#eee9dc] pt-4">
-                      <div className="flex items-start gap-3">
-                        <BriefcaseBusiness
-                          size={16}
-                          className="mt-0.5 shrink-0 text-[#b28b1e]"
-                        />
-
-                        <div>
-                          <p className="text-sm font-semibold text-gray-700">
-                            {member.role}
-                          </p>
-
-                          <p className="mt-1 text-sm text-gray-500">
-                            {member.company}
-                          </p>
+                            <span className="mt-1 inline-flex rounded-full bg-[#f7f5ee] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#8b806b]">
+                              BSA Batch {batchYear}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    </div>
 
-                    {index === 0 && (
-                      <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#eef5ef] px-3 py-1.5 text-xs font-bold text-[#286044]">
-                        <Award size={13} />
-                        You
+                        <div className="mt-5 border-t border-[#eee9dc] pt-4">
+                          <div className="flex items-start gap-3">
+                            <BriefcaseBusiness
+                              size={16}
+                              className="mt-0.5 shrink-0 text-[#b28b1e]"
+                            />
+
+                            <div>
+                              <p className="text-sm font-semibold text-gray-700">
+                                {member.profession || "Alumni"}
+                              </p>
+
+                              <p className="mt-1 text-sm text-gray-500">
+                                {member.company || "PLM College of Accountancy"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {isCurrentUser && (
+                          <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#eef5ef] px-3 py-1.5 text-xs font-bold text-[#286044]">
+                            <Award size={13} />
+                            You
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </article>
-              ))}
-            </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
           </section>
 
-          {/* Stay Connected */}
           <section className="relative mt-9 overflow-hidden rounded-3xl bg-[#18392b] p-7 text-white shadow-sm lg:p-8">
             <div className="absolute -right-10 -top-16 h-44 w-44 rounded-full border border-white/10" />
 

@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -12,96 +12,91 @@ import {
   Filter,
   ChevronRight,
 } from "lucide-react";
-
-const alumniData = [
-  {
-    id: 1,
-    name: "Maria Santos",
-    studentNumber: "2021-00125",
-    batch: "2025",
-    profession: "Certified Public Accountant",
-    company: "Santos & Associates",
-    status: "Active",
-  },
-  {
-    id: 2,
-    name: "John Reyes",
-    studentNumber: "2020-00418",
-    batch: "2024",
-    profession: "Accountant",
-    company: "Reyes Accounting Services",
-    status: "Active",
-  },
-  {
-    id: 3,
-    name: "Angela Cruz",
-    studentNumber: "2019-00831",
-    batch: "2023",
-    profession: "Financial Analyst",
-    company: "Metro Finance Corp.",
-    status: "Active",
-  },
-  {
-    id: 4,
-    name: "Carlos Mendoza",
-    studentNumber: "2018-00642",
-    batch: "2022",
-    profession: "Auditor",
-    company: "Mendoza & Co.",
-    status: "Active",
-  },
-  {
-    id: 5,
-    name: "Sofia Garcia",
-    studentNumber: "2017-00317",
-    batch: "2021",
-    profession: "Tax Consultant",
-    company: "Garcia Tax Solutions",
-    status: "Active",
-  },
-  {
-    id: 6,
-    name: "Daniel Flores",
-    studentNumber: "2016-00924",
-    batch: "2020",
-    profession: "Accounting Manager",
-    company: "Global Business Inc.",
-    status: "Inactive",
-  },
-  {
-    id: 7,
-    name: "Patricia Aquino",
-    studentNumber: "2015-00276",
-    batch: "2019",
-    profession: "CPA",
-    company: "Aquino Financial Services",
-    status: "Active",
-  },
-];
-
-const batches = ["All", "2025", "2024", "2023", "2022", "2021", "2020", "2019"];
+import { supabase } from "../lib/supabase";
 
 export default function AdminAlumni() {
+  const [alumniData, setAlumniData] = useState([]);
+  const [batchOptions, setBatchOptions] = useState(["All"]);
   const [search, setSearch] = useState("");
   const [batch, setBatch] = useState("All");
   const [status, setStatus] = useState("All");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [selectedAlumni, setSelectedAlumni] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+
+  useEffect(() => {
+    async function loadAlumni() {
+      setLoading(true);
+      setError("");
+
+      const { data, error: alumniError } = await supabase
+        .from("profiles")
+        .select(
+          "id, student_number, first_name, middle_name, last_name, email, graduation_year, profession, company, role, created_at"
+        )
+        .eq("role", "alumni")
+        .order("last_name", { ascending: true });
+
+      if (alumniError) {
+        setError(alumniError.message);
+        setAlumniData([]);
+        setLoading(false);
+        return;
+      }
+
+      const formatted = (data ?? []).map((alumni) => ({
+        id: alumni.id,
+        name: [alumni.first_name, alumni.middle_name, alumni.last_name]
+          .filter(Boolean)
+          .join(" "),
+        studentNumber: alumni.student_number || "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â",
+        batch: alumni.graduation_year
+          ? String(alumni.graduation_year)
+          : "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â",
+        profession: alumni.profession || "Not specified",
+        company: alumni.company || "Not specified",
+        email: alumni.email || "",
+        status: "Active",
+      }));
+
+      const years = [
+        ...new Set(
+          formatted
+            .map((alumni) => alumni.batch)
+            .filter((year) => year !== "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â")
+        ),
+      ].sort((a, b) => Number(b) - Number(a));
+
+      setAlumniData(formatted);
+      setBatchOptions(["All", ...years]);
+      setLoading(false);
+    }
+
+    loadAlumni();
+  }, []);
 
   const filteredAlumni = useMemo(() => {
     return alumniData.filter((alumni) => {
       const searchValue = search.toLowerCase().trim();
 
       const matchesSearch =
+        !searchValue ||
         alumni.name.toLowerCase().includes(searchValue) ||
         alumni.studentNumber.toLowerCase().includes(searchValue) ||
         alumni.profession.toLowerCase().includes(searchValue) ||
-        alumni.company.toLowerCase().includes(searchValue);
+        alumni.company.toLowerCase().includes(searchValue) ||
+        alumni.email.toLowerCase().includes(searchValue);
 
-      const matchesBatch = batch === "All" || alumni.batch === batch;
-      const matchesStatus = status === "All" || alumni.status === status;
+      const matchesBatch =
+        batch === "All" || alumni.batch === batch;
+
+      const matchesStatus =
+        status === "All" || alumni.status === status;
 
       return matchesSearch && matchesBatch && matchesStatus;
     });
-  }, [search, batch, status]);
+  }, [alumniData, search, batch, status]);
 
   const activeCount = alumniData.filter(
     (alumni) => alumni.status === "Active"
@@ -114,13 +109,14 @@ export default function AdminAlumni() {
   const getInitials = (name) =>
     name
       .split(" ")
+      .filter(Boolean)
       .map((part) => part[0])
       .slice(0, 2)
-      .join("");
+      .join("")
+      .toUpperCase();
 
   return (
     <div className="min-h-screen bg-[#f7f5ee] text-[#18392b]">
-      {/* Header */}
       <header className="sticky top-0 z-40 border-b border-[#315442] bg-[#18392b] text-white shadow-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
           <Link to="/admin" className="flex items-center gap-3">
@@ -132,7 +128,6 @@ export default function AdminAlumni() {
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#d4af37]">
                 PLM College of Accountancy
               </p>
-
               <p className="font-serif text-base font-bold">
                 BSA Alumni Administration
               </p>
@@ -153,7 +148,6 @@ export default function AdminAlumni() {
       </header>
 
       <main className="mx-auto max-w-7xl px-6 py-8 lg:px-8 lg:py-10">
-        {/* Back */}
         <Link
           to="/admin"
           className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-[#18392b] transition hover:text-[#b28b1e]"
@@ -162,7 +156,6 @@ export default function AdminAlumni() {
           Back to Admin Dashboard
         </Link>
 
-        {/* Page Heading */}
         <div className="mb-8 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#b28b1e]">
@@ -180,6 +173,7 @@ export default function AdminAlumni() {
 
           <button
             type="button"
+            onClick={() => setShowAddModal(true)}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#18392b] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#24513d]"
           >
             <Plus size={18} />
@@ -187,7 +181,12 @@ export default function AdminAlumni() {
           </button>
         </div>
 
-        {/* Summary Cards */}
+        {error && (
+          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold text-red-700">
+            Unable to load alumni records: {error}
+          </div>
+        )}
+
         <section className="grid gap-4 sm:grid-cols-3">
           <div className="rounded-2xl border border-[#ddd7c8] bg-white p-5 shadow-sm">
             <div className="flex items-center gap-3">
@@ -201,7 +200,7 @@ export default function AdminAlumni() {
                 </p>
 
                 <p className="mt-1 font-serif text-2xl font-bold">
-                  {alumniData.length}
+                  {loading ? "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â" : alumniData.length}
                 </p>
               </div>
             </div>
@@ -219,7 +218,7 @@ export default function AdminAlumni() {
                 </p>
 
                 <p className="mt-1 font-serif text-2xl font-bold">
-                  {activeCount}
+                  {loading ? "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â" : activeCount}
                 </p>
               </div>
             </div>
@@ -237,14 +236,13 @@ export default function AdminAlumni() {
                 </p>
 
                 <p className="mt-1 font-serif text-2xl font-bold">
-                  {inactiveCount}
+                  {loading ? "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â" : inactiveCount}
                 </p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Search and Filters */}
         <section className="mt-7 rounded-3xl border border-[#ddd7c8] bg-white p-5 shadow-sm lg:p-6">
           <div className="mb-4 flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#eee9dc] text-[#18392b]">
@@ -273,7 +271,7 @@ export default function AdminAlumni() {
                 type="text"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search name, student number, profession, or company..."
+                placeholder="Search name, student number, profession, company, or email..."
                 className="w-full rounded-xl border border-[#d8d2c2] bg-[#fbfaf6] py-3 pl-10 pr-4 text-sm text-[#18392b] outline-none transition placeholder:text-gray-400 focus:border-[#18392b] focus:ring-2 focus:ring-[#18392b]/10"
               />
             </div>
@@ -283,9 +281,9 @@ export default function AdminAlumni() {
               onChange={(event) => setBatch(event.target.value)}
               className="rounded-xl border border-[#d8d2c2] bg-[#fbfaf6] px-4 py-3 text-sm text-[#18392b] outline-none transition focus:border-[#18392b] focus:ring-2 focus:ring-[#18392b]/10"
             >
-              {batches.map((year) => (
+              {batchOptions.map((year) => (
                 <option key={year} value={year}>
-                  {year === "All" ? "All Batches" : `Batch ${year}`}
+                  {year === "All" ? "All Batches" : "Batch " + year}
                 </option>
               ))}
             </select>
@@ -302,7 +300,6 @@ export default function AdminAlumni() {
           </div>
         </section>
 
-        {/* Alumni Table */}
         <section className="mt-7 overflow-hidden rounded-3xl border border-[#ddd7c8] bg-white shadow-sm">
           <div className="flex flex-col gap-3 border-b border-[#e4dfd3] px-5 py-5 sm:flex-row sm:items-center sm:justify-between lg:px-6">
             <div>
@@ -315,7 +312,8 @@ export default function AdminAlumni() {
               </h2>
 
               <p className="mt-1 text-xs text-gray-500">
-                Showing {filteredAlumni.length} of {alumniData.length} records
+                Showing {loading ? "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â" : filteredAlumni.length} of{" "}
+                {loading ? "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â" : alumniData.length} records
               </p>
             </div>
 
@@ -339,81 +337,93 @@ export default function AdminAlumni() {
               </thead>
 
               <tbody className="divide-y divide-[#eee9df]">
-                {filteredAlumni.map((alumni) => (
-                  <tr
-                    key={alumni.id}
-                    className="group transition hover:bg-[#fbfaf6]"
-                  >
-                    <td className="px-5 py-4 lg:px-6">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#18392b] font-serif text-sm font-bold text-[#d4af37]">
-                          {getInitials(alumni.name)}
-                        </div>
-
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-[#18392b]">
-                            {alumni.name}
-                          </p>
-
-                          <p className="mt-0.5 text-xs text-gray-400">
-                            Alumni Member
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-
-                    <td className="px-5 py-4 text-sm text-gray-600">
-                      {alumni.studentNumber}
-                    </td>
-
-                    <td className="px-5 py-4">
-                      <span className="inline-flex rounded-full bg-[#fff7df] px-3 py-1 text-xs font-bold text-[#806612]">
-                        BSA {alumni.batch}
-                      </span>
-                    </td>
-
-                    <td className="px-5 py-4 text-sm text-gray-600">
-                      {alumni.profession}
-                    </td>
-
-                    <td className="px-5 py-4 text-sm text-gray-600">
-                      {alumni.company}
-                    </td>
-
-                    <td className="px-5 py-4">
-                      <span
-                        className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
-                          alumni.status === "Active"
-                            ? "bg-[#eef5ef] text-[#286044]"
-                            : "bg-gray-100 text-gray-500"
-                        }`}
-                      >
-                        {alumni.status}
-                      </span>
-                    </td>
-
-                    <td className="px-5 py-4 text-right">
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1.5 rounded-xl border border-[#d8d2c2] px-3 py-2 text-xs font-bold text-[#18392b] transition hover:border-[#18392b] hover:bg-[#f7f5ee]"
-                      >
-                        <Eye size={15} />
-                        View
-                        <ChevronRight
-                          size={13}
-                          className="transition group-hover:translate-x-0.5"
-                        />
-                      </button>
+                {loading ? (
+                  <tr>
+                    <td colSpan="7" className="px-5 py-16 text-center">
+                      <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[#d4af37] border-t-[#18392b]" />
+                      <p className="mt-4 text-sm font-semibold text-gray-500">
+                        Loading alumni records...
+                      </p>
                     </td>
                   </tr>
-                ))}
-
-                {filteredAlumni.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan="7"
-                      className="px-5 py-16 text-center"
+                ) : (
+                  filteredAlumni.map((alumni) => (
+                    <tr
+                      key={alumni.id}
+                      className="group transition hover:bg-[#fbfaf6]"
                     >
+                      <td className="px-5 py-4 lg:px-6">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#18392b] font-serif text-sm font-bold text-[#d4af37]">
+                            {getInitials(alumni.name)}
+                          </div>
+
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-[#18392b]">
+                              {alumni.name}
+                            </p>
+
+                            <p className="mt-0.5 text-xs text-gray-400">
+                              {alumni.email || "Alumni Member"}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-4 text-sm text-gray-600">
+                        {alumni.studentNumber}
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <span className="inline-flex rounded-full bg-[#fff7df] px-3 py-1 text-xs font-bold text-[#806612]">
+                          {alumni.batch === "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"
+                            ? "Batch not set"
+                            : "BSA " + alumni.batch}
+                        </span>
+                      </td>
+
+                      <td className="px-5 py-4 text-sm text-gray-600">
+                        {alumni.profession}
+                      </td>
+
+                      <td className="px-5 py-4 text-sm text-gray-600">
+                        {alumni.company}
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <span
+                          className={
+                            "inline-flex rounded-full px-3 py-1 text-xs font-bold " +
+                            (alumni.status === "Active"
+                              ? "bg-[#eef5ef] text-[#286044]"
+                              : "bg-gray-100 text-gray-500")
+                          }
+                        >
+                          {alumni.status}
+                        </span>
+                      </td>
+
+                      <td className="px-5 py-4 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedAlumni(alumni)}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-[#d8d2c2] px-3 py-2 text-xs font-bold text-[#18392b] transition hover:border-[#18392b] hover:bg-[#f7f5ee]"
+                        >
+                          <Eye size={15} />
+                          View
+                          <ChevronRight
+                            size={13}
+                            className="transition group-hover:translate-x-0.5"
+                          />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+
+                {!loading && filteredAlumni.length === 0 && (
+                  <tr>
+                    <td colSpan="7" className="px-5 py-16 text-center">
                       <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#eee9dc] text-[#18392b]">
                         <Users size={24} />
                       </div>
@@ -433,11 +443,349 @@ export default function AdminAlumni() {
           </div>
         </section>
 
-        {/* Footer */}
+        {showAddModal && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-[#18392b]/60 px-4 py-6 backdrop-blur-sm"
+            onClick={() => setShowAddModal(false)}
+          >
+            <div
+              className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-[#ddd7c8] bg-[#f7f5ee] shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="bg-[#18392b] px-6 py-6 text-white">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#d4af37]">
+                      Alumni Management
+                    </p>
+
+                    <h2 className="mt-1 font-serif text-2xl font-bold">
+                      Add Alumni
+                    </h2>
+
+                    <p className="mt-1 text-sm text-white/60">
+                      Create a new alumni profile record.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="rounded-xl border border-white/10 px-3 py-2 text-sm font-bold text-white/70 transition hover:bg-white/10 hover:text-white"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+
+              <form
+                className="space-y-5 p-6"
+                onSubmit={async (event) => {
+                  event.preventDefault();
+
+                  const form = event.currentTarget;
+                  const formData = new FormData(form);
+
+                  const payload = {
+                    email: String(formData.get("email") || "").trim(),
+                    password: String(formData.get("password") || ""),
+                    first_name: String(formData.get("first_name") || "").trim(),
+                    middle_name: "",
+                    last_name: String(formData.get("last_name") || "").trim(),
+                    student_number: String(formData.get("student_number") || "").trim(),
+                    graduation_year: Number(formData.get("graduation_year") || 0),
+                    profession: String(formData.get("profession") || "").trim(),
+                    company: String(formData.get("company") || "").trim(),
+                  };
+
+                  try {
+                    const { data, error } = await supabase.functions.invoke(
+                      "create-alumni",
+                      { body: payload }
+                    );
+
+                    if (error) {
+                      let message = error.message || "Unable to create alumni account.";
+
+                      try {
+                        if (error.context) {
+                          const responseBody = await error.context.json();
+                          message = responseBody?.error || message;
+                        }
+                      } catch {
+                        // Keep the original error message if the response body cannot be parsed.
+                      }
+
+                      throw new Error(message);
+                    }
+
+                    if (!data?.success) {
+                      throw new Error(
+                        data?.error || "Unable to create alumni account."
+                      );
+                    }
+
+                    alert("Alumni account created successfully.");
+                    form.reset();
+                    setShowAddModal(false);
+                    window.location.reload();
+                  } catch (error) {
+                    console.error("Create alumni error:", error);
+                    alert(
+                      error.message || "Unable to create alumni account."
+                    );
+                  }
+                }}
+              >
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
+                      First Name
+                    </label>
+                    <input
+                      type="text"
+                      name="first_name"
+                      placeholder="First name"
+                      required
+                      className="w-full rounded-xl border border-[#d8d2c2] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#18392b] focus:ring-2 focus:ring-[#18392b]/10"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      name="last_name"
+                      placeholder="Last name"
+                      required
+                      className="w-full rounded-xl border border-[#d8d2c2] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#18392b] focus:ring-2 focus:ring-[#18392b]/10"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
+                      Student Number
+                    </label>
+                    <input
+                      type="text"
+                      name="student_number"
+                      placeholder="e.g. 2026-00123"
+                      className="w-full rounded-xl border border-[#d8d2c2] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#18392b] focus:ring-2 focus:ring-[#18392b]/10"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
+                      Graduation Year
+                    </label>
+                    <input
+                      type="number"
+                      name="graduation_year"
+                      placeholder="e.g. 2026"
+                      className="w-full rounded-xl border border-[#d8d2c2] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#18392b] focus:ring-2 focus:ring-[#18392b]/10"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      placeholder="alumni@example.com"
+                      required
+                      className="w-full rounded-xl border border-[#d8d2c2] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#18392b] focus:ring-2 focus:ring-[#18392b]/10"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
+                      Temporary Password
+                    </label>
+                    <input
+                      type="password"
+                      name="password"
+                      placeholder="Minimum 8 characters"
+                      minLength={8}
+                      required
+                      className="w-full rounded-xl border border-[#d8d2c2] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#18392b] focus:ring-2 focus:ring-[#18392b]/10"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
+                      Profession
+                    </label>
+                    <input
+                      type="text"
+                      name="profession"
+                      placeholder="e.g. Certified Public Accountant"
+                      className="w-full rounded-xl border border-[#d8d2c2] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#18392b] focus:ring-2 focus:ring-[#18392b]/10"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
+                      Company
+                    </label>
+                    <input
+                      type="text"
+                      name="company"
+                      placeholder="Company or organization"
+                      className="w-full rounded-xl border border-[#d8d2c2] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#18392b] focus:ring-2 focus:ring-[#18392b]/10"
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-[#d8d2c2] bg-[#fbfaf6] p-4">
+                  <p className="text-xs font-bold text-[#18392b]">
+                    Account creation
+                  </p>
+
+                  <p className="mt-1 text-xs leading-5 text-gray-500">
+                    The alumni login account will be connected through
+                    Supabase Authentication in the next step. This form
+                    currently prepares the profile information only.
+                  </p>
+                </div>
+
+                <div className="flex flex-col-reverse gap-3 border-t border-[#ddd7c8] pt-5 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="rounded-xl border border-[#d8d2c2] px-5 py-3 text-sm font-bold text-[#18392b] transition hover:bg-white"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#18392b] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#24513d]"
+                  >
+                    <Plus size={17} />
+                    Save Alumni
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+        {selectedAlumni && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-[#18392b]/60 px-4 py-6 backdrop-blur-sm"
+            onClick={() => setSelectedAlumni(null)}
+          >
+            <div
+              className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-[#ddd7c8] bg-[#f7f5ee] shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="bg-[#18392b] px-6 py-6 text-white">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#d4af37] font-serif text-lg font-bold text-[#18392b]">
+                      {getInitials(selectedAlumni.name)}
+                    </div>
+
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#d4af37]">
+                        Alumni Profile
+                      </p>
+
+                      <h2 className="mt-1 font-serif text-2xl font-bold">
+                        {selectedAlumni.name}
+                      </h2>
+
+                      <p className="mt-1 text-sm text-white/60">
+                        {selectedAlumni.email || "No email provided"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAlumni(null)}
+                    className="rounded-xl border border-white/10 px-3 py-2 text-sm font-bold text-white/70 transition hover:bg-white/10 hover:text-white"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid gap-4 p-6 sm:grid-cols-2">
+                <div className="rounded-2xl border border-[#ddd7c8] bg-white p-5">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400">
+                    Student Number
+                  </p>
+                  <p className="mt-2 text-sm font-bold text-[#18392b]">
+                    {selectedAlumni.studentNumber}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-[#ddd7c8] bg-white p-5">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400">
+                    Alumni Batch
+                  </p>
+                  <p className="mt-2 text-sm font-bold text-[#18392b]">
+                    {selectedAlumni.batch === "â€”"
+                      ? "Batch not set"
+                      : "BSA " + selectedAlumni.batch}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-[#ddd7c8] bg-white p-5">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400">
+                    Profession
+                  </p>
+                  <p className="mt-2 text-sm font-bold text-[#18392b]">
+                    {selectedAlumni.profession}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-[#ddd7c8] bg-white p-5">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400">
+                    Company
+                  </p>
+                  <p className="mt-2 text-sm font-bold text-[#18392b]">
+                    {selectedAlumni.company}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-[#ddd7c8] bg-white p-5 sm:col-span-2">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400">
+                    Account Status
+                  </p>
+
+                  <div className="mt-2">
+                    <span
+                      className={
+                        "inline-flex rounded-full px-3 py-1 text-xs font-bold " +
+                        (selectedAlumni.status === "Active"
+                          ? "bg-[#eef5ef] text-[#286044]"
+                          : "bg-gray-100 text-gray-500")
+                      }
+                    >
+                      {selectedAlumni.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-[#ddd7c8] px-6 py-5">
+                <p className="text-xs leading-5 text-gray-500">
+                  This information is loaded from the alumni profile stored in
+                  the PLM Alumni System database.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         <footer className="mt-10 border-t border-[#ddd7c8] py-6">
           <div className="flex flex-col gap-2 text-xs text-gray-400 sm:flex-row sm:items-center sm:justify-between">
             <p>
-              © 2026 PLM College of Accountancy — BSA Alumni System
+              Ãƒâ€šÃ‚Â© 2026 PLM College of Accountancy ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â BSA Alumni System
             </p>
 
             <Link

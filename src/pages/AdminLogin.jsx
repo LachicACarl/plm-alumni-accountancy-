@@ -1,32 +1,72 @@
 ﻿import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { GraduationCap, LockKeyhole, ShieldCheck, UserRound } from "lucide-react";
+import { supabase } from "../lib/supabase";
 
 export default function AdminLogin() {
   const navigate = useNavigate();
 
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleLogin = (event) => {
+  const handleLogin = async (event) => {
     event.preventDefault();
     setError("");
 
-    if (!username.trim() || !password.trim()) {
-      setError("Please enter your username and password.");
+    if (!email.trim() || !password.trim()) {
+      setError("Please enter your email and password.");
       return;
     }
 
-    if (username === "admin" && password === "admin123") {
-      localStorage.setItem("adminLoggedIn", "true");
-      localStorage.setItem("adminUser", username);
-      navigate("/admin");
-      return;
-    }
+    setLoading(true);
 
-    setError("Invalid admin credentials.");
+    try {
+      const { data: authData, error: authError } =
+        await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+
+      if (authError) {
+        throw new Error("Invalid admin email or password.");
+      }
+
+      if (!authData.user) {
+        throw new Error("Unable to authenticate the administrator.");
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, email, role")
+        .eq("id", authData.user.id)
+        .single();
+
+      if (profileError || !profile) {
+        await supabase.auth.signOut();
+        throw new Error(
+          "Administrator profile was not found. Please contact the system administrator."
+        );
+      }
+
+      if (!["admin", "head_admin"].includes(profile.role)) {
+        await supabase.auth.signOut();
+        throw new Error(
+          "This account does not have administrator access."
+        );
+      }
+
+      navigate("/admin", { replace: true });
+    } catch (loginError) {
+      setError(
+        loginError?.message ||
+          "Unable to sign in. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -100,10 +140,10 @@ export default function AdminLogin() {
 
               <div>
                 <label
-                  htmlFor="admin-username"
+                  htmlFor="admin-email"
                   className="mb-2 block text-sm font-semibold"
                 >
-                  Username
+                  Admin Email
                 </label>
 
                 <div className="relative">
@@ -113,11 +153,12 @@ export default function AdminLogin() {
                   />
 
                   <input
-                    id="admin-username"
-                    type="text"
-                    value={username}
-                    onChange={(event) => setUsername(event.target.value)}
-                    placeholder="Enter admin username"
+                    id="admin-email"
+                    type="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    placeholder="Enter admin email"
+                    autoComplete="email"
                     className="w-full rounded-xl border border-[#d8d2c2] bg-[#fbfaf6] py-3 pl-10 pr-4 text-sm outline-none transition focus:border-[#18392b] focus:ring-2 focus:ring-[#18392b]/10"
                   />
                 </div>
@@ -143,12 +184,13 @@ export default function AdminLogin() {
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     placeholder="Enter admin password"
+                    autoComplete="current-password"
                     className="w-full rounded-xl border border-[#d8d2c2] bg-[#fbfaf6] py-3 pl-10 pr-20 text-sm outline-none transition focus:border-[#18392b] focus:ring-2 focus:ring-[#18392b]/10"
                   />
 
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
+                    onClick={() => setShowPassword((current) => !current)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#18392b] hover:text-[#9a7b16]"
                   >
                     {showPassword ? "Hide" : "Show"}
@@ -158,10 +200,11 @@ export default function AdminLogin() {
 
               <button
                 type="submit"
-                className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#18392b] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#24513d]"
+                disabled={loading}
+                className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#18392b] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#24513d] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <ShieldCheck size={18} />
-                Sign In as Admin
+                {loading ? "Signing In..." : "Sign In as Admin"}
               </button>
 
               <div className="mt-6 border-t border-[#e4dfd3] pt-5 text-center">
@@ -183,9 +226,8 @@ export default function AdminLogin() {
               </div>
             </form>
 
-            <div className="mt-5 rounded-xl border border-[#e4dfd3] bg-white/60 px-4 py-3 text-center text-xs text-slate-500">
-              Mock admin account: <strong>admin</strong> /{" "}
-              <strong>admin123</strong>
+            <div className="mt-5 text-center text-xs text-slate-400">
+              Authorized administrators only.
             </div>
           </div>
         </div>

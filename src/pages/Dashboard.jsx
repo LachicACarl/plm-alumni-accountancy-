@@ -11,7 +11,8 @@ import {
   UserRound,
   UsersRound,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
 import DashboardSidebar from "../components/DashboardSidebar";
 
 const stats = [
@@ -34,6 +35,51 @@ const activities = [
 
 export default function Dashboard() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [profile, setProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+          setProfileLoading(false);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("first_name, middle_name, last_name, graduation_year, profession, company, role")
+          .eq("id", user.id)
+          .single();
+
+        if (error) throw error;
+
+        setProfile(data);
+      } catch (error) {
+        console.error("Unable to load alumni profile:", error);
+      } finally {
+        setProfileLoading(false);
+      }
+    }
+
+    loadProfile();
+  }, []);
+
+  const fullName = profile
+    ? [profile.first_name, profile.middle_name, profile.last_name]
+        .filter(Boolean)
+        .join(" ")
+    : "Alumni";
+
+  const batch = profile?.graduation_year
+    ? `BSA ${profile.graduation_year}`
+    : "BSA Alumni";
+
+  const profession = profile?.profession || "BSA Alumni";
 
   return (
     <div className="min-h-screen bg-[#f7f5ee] text-[#18392b] lg:flex">
@@ -87,7 +133,7 @@ export default function Dashboard() {
                 </div>
 
                 <h2 className="mt-4 font-serif text-3xl font-bold text-white sm:text-4xl">
-                  Hello, Maria Santos
+                  Hello, {profileLoading ? "Loading..." : fullName}
                 </h2>
 
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70">
@@ -125,7 +171,7 @@ export default function Dashboard() {
                       Alumni Batch
                     </p>
                     <p className="font-serif text-xl font-bold text-white">
-                      BSA 2025
+                      {batch}
                     </p>
                   </div>
                 </div>
@@ -200,12 +246,12 @@ export default function Dashboard() {
                   </div>
 
                   <div>
-                    <h4 className="font-serif text-lg font-bold">Maria Santos</h4>
+                    <h4 className="font-serif text-lg font-bold">{profileLoading ? "Loading..." : fullName}</h4>
                     <p className="mt-0.5 text-xs text-gray-500">
                       Bachelor of Science in Accountancy � Batch 2025
                     </p>
                     <p className="mt-1 text-xs font-semibold text-[#18392b]/75">
-                      Certified Public Accountant
+                      {profession}
                     </p>
                   </div>
 

@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 import {
   ArrowLeft,
   Award,
@@ -70,12 +70,11 @@ export default function Achievements() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f7f5ee] lg:flex">
+    <div className="min-h-screen bg-[#f7f5ee] text-[#18392b] lg:flex">
       <DashboardSidebar />
 
       <main className="min-w-0 flex-1">
-        {/* Header */}
-        <header className="border-b border-[#ddd7c8] bg-white px-6 py-5 lg:px-8">
+        <header className="border-b border-[#ddd7c8] bg-white px-5 py-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <Link
               to="/dashboard"
@@ -100,8 +99,7 @@ export default function Achievements() {
           </div>
         </header>
 
-        <div className="mx-auto max-w-6xl px-6 py-8 lg:px-8 lg:py-10">
-          {/* Recognition Hero */}
+        <div className="mx-auto max-w-7xl px-5 py-6 sm:px-6 lg:px-8 lg:py-7">
           <section className="overflow-hidden rounded-3xl bg-[#18392b] shadow-sm">
             <div className="relative p-7 lg:p-8">
               <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full border border-white/10" />
@@ -142,14 +140,12 @@ export default function Achievements() {
             </div>
           </section>
 
-          {/* Achievement Summary */}
           <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-2xl border border-[#ddd7c8] bg-white p-5 shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#eee9dc] text-[#18392b]">
                   <Award size={21} />
                 </div>
-
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
                     Total
@@ -166,7 +162,6 @@ export default function Achievements() {
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#eef5ef] text-[#18392b]">
                   <GraduationCap size={21} />
                 </div>
-
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
                     Academic
@@ -183,7 +178,6 @@ export default function Achievements() {
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#fff7df] text-[#a07810]">
                   <BriefcaseBusiness size={21} />
                 </div>
-
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
                     Professional
@@ -200,7 +194,6 @@ export default function Achievements() {
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f2eee5] text-[#18392b]">
                   <Trophy size={21} />
                 </div>
-
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
                     Recognition
@@ -213,7 +206,6 @@ export default function Achievements() {
             </div>
           </div>
 
-          {/* Achievement List */}
           <section className="mt-8">
             <div className="mb-5">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#b28b1e]">
@@ -283,7 +275,6 @@ export default function Achievements() {
             </div>
           </section>
 
-          {/* Submit Achievement */}
           <section className="mt-8 overflow-hidden rounded-3xl border border-dashed border-[#c9c1ad] bg-[#fbfaf6] p-8 text-center lg:p-10">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#eee9dc] text-[#18392b]">
               <Award size={28} />

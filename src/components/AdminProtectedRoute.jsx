@@ -1,10 +1,65 @@
-﻿import { Navigate } from "react-router-dom";
+﻿import { useEffect, useState } from "react";
+import { Navigate } from "react-router-dom";
+import { supabase } from "../lib/supabase";
 
 export default function AdminProtectedRoute({ children }) {
-  const loggedIn = localStorage.getItem("adminLoggedIn") === "true";
+  const [status, setStatus] = useState("checking");
 
-  if (!loggedIn) {
-    return <Navigate to="/login" replace />;
+  useEffect(() => {
+    let mounted = true;
+
+    async function checkAdminAccess() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        if (mounted) setStatus("unauthenticated");
+        return;
+      }
+
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      if (
+        error ||
+        !profile ||
+        !["admin", "head_admin"].includes(profile.role)
+      ) {
+        await supabase.auth.signOut();
+
+        if (mounted) setStatus("unauthorized");
+        return;
+      }
+
+      if (mounted) setStatus("authorized");
+    }
+
+    checkAdminAccess();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  if (status === "checking") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f7f5ee] text-[#18392b]">
+        <div className="text-center">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[#d4af37] border-t-[#18392b]" />
+          <p className="mt-4 text-sm font-semibold">
+            Checking administrator access...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status !== "authorized") {
+    return <Navigate to="/admin/login" replace />;
   }
 
   return children;

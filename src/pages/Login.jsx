@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import plmCampus from "../assets/plm-campus.jpg";
 import plmLogo from "../../assets/plm-accountancy-logo.svg";
+import { supabase } from "../lib/supabase";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -19,15 +20,8 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const loggedIn = localStorage.getItem("alumniLoggedIn") === "true";
 
-    if (loggedIn) {
-      navigate("/dashboard", { replace: true });
-    }
-  }, [navigate]);
-
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     setError("");
 
@@ -36,24 +30,43 @@ export default function Login() {
       return;
     }
 
-    localStorage.setItem("alumniLoggedIn", "true");
-    localStorage.setItem("alumniUser", username.trim());
+    try {
+      const { data, error: loginError } =
+        await supabase.auth.signInWithPassword({
+          email: username.trim(),
+          password,
+        });
 
-    if (remember) {
-      localStorage.setItem("alumniRemembered", "true");
-    } else {
-      localStorage.removeItem("alumniRemembered");
+      if (loginError) {
+        throw loginError;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role, first_name, last_name")
+        .eq("id", data.user.id)
+        .single();
+
+      if (profileError || !profile) {
+        await supabase.auth.signOut();
+        throw new Error("Your alumni profile could not be found.");
+      }
+
+      if (profile.role !== "alumni") {
+        await supabase.auth.signOut();
+        throw new Error("This account is not an alumni account.");
+      }
+
+      if (remember) {
+        localStorage.setItem("alumniRemembered", "true");
+      } else {
+        localStorage.removeItem("alumniRemembered");
+      }
+
+      navigate("/dashboard");
+    } catch (loginError) {
+      setError(loginError.message || "Unable to sign in.");
     }
-
-    navigate("/dashboard");
-  }
-
-  function handleGoogleLogin() {
-    localStorage.setItem("alumniLoggedIn", "true");
-    localStorage.setItem("alumniUser", "Google Alumni");
-    localStorage.setItem("alumniRemembered", "true");
-
-    navigate("/dashboard");
   }
 
   function handleForgotPassword() {
@@ -231,19 +244,6 @@ export default function Login() {
                       </p>
                     </div>
 
-                    {/* Google */}
-                    <button
-                      type="button"
-                      onClick={handleGoogleLogin}
-                      className="mt-7 flex h-13 w-full items-center justify-center gap-3 rounded-xl border border-[#b5bdb5] bg-white/75 px-5 text-sm font-medium text-[#3f4841] shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
-                    >
-                      <span className="flex h-6 w-6 items-center justify-center text-[19px] font-bold text-[#4285F4]">
-                        G
-                      </span>
-
-                      Continue with Google
-                    </button>
-
                     {/* Divider */}
                     <div className="my-6 flex items-center gap-4">
                       <div className="h-px flex-1 bg-[#b7beb8]" />
@@ -265,6 +265,9 @@ export default function Login() {
                         />
 
                         <input
+                          id="username"
+                          name="username"
+                          autoComplete="username"
                           type="text"
                           value={username}
                           onChange={(event) => setUsername(event.target.value)}
@@ -282,6 +285,9 @@ export default function Login() {
                         />
 
                         <input
+                          id="password"
+                          name="password"
+                          autoComplete="current-password"
                           type={showPassword ? "text" : "password"}
                           value={password}
                           onChange={(event) => setPassword(event.target.value)}
@@ -309,6 +315,9 @@ export default function Login() {
                       <div className="flex items-center justify-between gap-4 px-1">
                         <label className="flex cursor-pointer items-center gap-2 text-xs text-[#656d66] sm:text-sm">
                           <input
+                            id="remember"
+                            name="remember"
+                            autoComplete="off"
                             type="checkbox"
                             checked={remember}
                             onChange={(event) =>
@@ -384,3 +393,14 @@ export default function Login() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+

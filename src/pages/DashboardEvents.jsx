@@ -4,7 +4,6 @@ import {
   CalendarDays,
   Clock,
   MapPin,
-  Menu,
   Users,
 } from "lucide-react";
 import DashboardSidebar from "../components/DashboardSidebar";
@@ -46,12 +45,12 @@ export default function DashboardEvents() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f7f5ee] lg:flex">
+    <div className="min-h-screen bg-[#f7f5ee] text-[#18392b] lg:flex">
       <DashboardSidebar />
 
       <main className="min-w-0 flex-1">
-        <header className="border-b border-[#ddd7c8] bg-white px-6 py-5">
-          <div>
+        <header className="border-b border-[#ddd7c8] bg-white px-5 py-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl">
             <Link
               to="/dashboard"
               className="mb-2 inline-flex items-center gap-2 text-sm text-[#18392b] hover:underline"
@@ -70,8 +69,8 @@ export default function DashboardEvents() {
           </div>
         </header>
 
-        <div className="p-6 lg:p-8">
-          <section className="mb-8 rounded-2xl bg-[#18392b] p-7 text-white shadow-sm">
+        <div className="mx-auto max-w-7xl px-5 py-6 sm:px-6 lg:px-8 lg:py-7">
+          <section className="mb-7 rounded-2xl bg-[#18392b] p-6 text-white shadow-sm sm:p-7">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#d4af37]">
@@ -164,7 +163,7 @@ export default function DashboardEvents() {
             ))}
           </div>
 
-          <section className="mt-8 rounded-2xl border border-[#ddd7c8] bg-white p-6 shadow-sm">
+          <section className="mt-7 rounded-2xl border border-[#ddd7c8] bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="font-serif text-xl font-bold text-[#18392b]">
@@ -185,10 +184,6 @@ export default function DashboardEvents() {
               </Link>
             </div>
           </section>
-
-          <button className="mt-5 rounded-lg border border-gray-300 p-3 sm:hidden">
-            <Menu size={20} />
-          </button>
         </div>
       </main>
     </div>
