@@ -1,73 +1,70 @@
-﻿import { CalendarDays, Clock, MapPin, ArrowRight, ChevronLeft, ChevronRight, Mail, Phone } from "lucide-react";
+import { useEffect, useState } from "react";
+import { CalendarDays, Clock, MapPin, ArrowRight, ChevronLeft, ChevronRight, Mail, Phone } from "lucide-react";
 import { Link } from "react-router-dom";
+import { getEvents } from "../lib/api";
 import PublicLayout from "../layouts/PublicLayout";
 import plmCampus from "../assets/plm-campus.jpg";
 import eventImage from "../assets/1.jpg";
 
-const events = [
-  {
-    title: "BSA Alumni Testimonial Dinner",
-    date: "May 24, 2026",
-    day: "24",
-    month: "MAY",
-    time: "6:00 PM - 9:00 PM",
-    location: "PLM College of Accountancy",
-    description:
-      "An evening of stories, achievements, and meaningful conversations with fellow BSA alumni.",
-    category: "Alumni Gathering",
-  },
-  {
-    title: "May 2026 CPALE Passers Recognition",
-    date: "May 15, 2026",
-    day: "15",
-    month: "MAY",
-    time: "2:00 PM - 5:00 PM",
-    location: "PLM Main Campus",
-    description:
-      "Celebrating the newest CPA passers and their outstanding achievement in the Accountancy program.",
-    category: "Recognition",
-  },
-  {
-    title: "BSA Alumni Homecoming",
-    date: "April 18, 2026",
-    day: "18",
-    month: "APR",
-    time: "10:00 AM - 4:00 PM",
-    location: "PLM College of Accountancy",
-    description:
-      "A special gathering where alumni from different batches reconnect and celebrate the PLM BSA community.",
-    category: "Homecoming",
-  },
-];
-
-const upcomingEvents = [
-  {
-    title: "BSA Alumni General Assembly",
-    date: "June 20, 2026",
-    day: "20",
-    month: "JUN",
-  },
-  {
-    title: "Accountancy Career Talk",
-    date: "July 11, 2026",
-    day: "11",
-    month: "JUL",
-  },
-  {
-    title: "BSA Alumni Sports Day",
-    date: "August 15, 2026",
-    day: "15",
-    month: "AUG",
-  },
-  {
-    title: "BSA Alumni Networking Night",
-    date: "September 12, 2026",
-    day: "12",
-    month: "SEP",
-  },
-];
-
 export default function Events() {
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function loadEvents() {
+      try {
+        const data = await getEvents();
+        setEvents(data ?? []);
+      } catch (err) {
+        console.error("Failed to load events:", err);
+        setError("Unable to load events.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadEvents();
+  }, []);
+
+  const upcomingEvents = events.filter(
+    (event) =>
+      event.event_date &&
+      new Date(`${event.event_date}T23:59:59`) >= new Date()
+  );
+
+  const formatDate = (date) =>
+    date
+      ? new Date(`${date}T00:00:00`).toLocaleDateString("en-US", {
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        })
+      : "";
+
+  const getMonth = (date) =>
+    date
+      ? new Date(`${date}T00:00:00`)
+          .toLocaleDateString("en-US", { month: "short" })
+          .toUpperCase()
+      : "";
+
+  const getDay = (date) =>
+    date ? new Date(`${date}T00:00:00`).getDate() : "";
+
+  const formatTime = (start, end) => {
+    if (!start && !end) return "";
+
+    const format = (value) =>
+      value
+        ? new Date(`1970-01-01T${value}`).toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+          })
+        : "";
+
+    return end ? `${format(start)} - ${format(end)}` : format(start);
+  };
   return (
     <PublicLayout>
       <main className="bg-white">
@@ -108,29 +105,42 @@ export default function Events() {
             {/* EVENT CARDS */}
             <div>
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {events.map((event) => (
+                {loading ? (
+                  <div className="col-span-full rounded-xl border border-[#d8ddd6] bg-white p-8 text-center text-sm text-[#68736c]">
+                    Loading events...
+                  </div>
+                ) : error ? (
+                  <div className="col-span-full rounded-xl border border-red-200 bg-red-50 p-8 text-center text-sm text-red-600">
+                    {error}
+                  </div>
+                ) : events.length === 0 ? (
+                  <div className="col-span-full rounded-xl border border-[#d8ddd6] bg-white p-8 text-center text-sm text-[#68736c]">
+                    No events available yet.
+                  </div>
+                ) : (
+                  events.map((event) => (
                   <article
                     key={event.title}
                     className="group overflow-hidden rounded-xl border border-[#273229] bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
                   >
                     <div className="relative h-[185px] overflow-hidden bg-[#dfe5df]">
                       <img
-                        src={eventImage}
+                        src={event.image_url || eventImage}
                         alt={event.title}
                         className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                       />
 
                       <div className="absolute left-4 top-4 overflow-hidden rounded-lg bg-white text-center shadow-md">
                         <div className="bg-[#18392b] px-3 py-1 text-[10px] font-bold tracking-[0.16em] text-white">
-                          {event.month}
+                          {getMonth(event.event_date)}
                         </div>
                         <div className="px-3 py-2 font-serif text-2xl font-bold text-[#18392b]">
-                          {event.day}
+                          {getDay(event.event_date)}
                         </div>
                       </div>
 
                       <span className="absolute bottom-3 left-3 rounded-full bg-[#d4af37] px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-[#18392b]">
-                        {event.category}
+                        {event.category || "Alumni Event"}
                       </span>
                     </div>
 
@@ -142,12 +152,12 @@ export default function Events() {
                       <div className="mt-4 space-y-2 text-xs text-[#68736c]">
                         <p className="flex items-center gap-2">
                           <CalendarDays size={15} className="shrink-0 text-[#9a7b1d]" />
-                          {event.date}
+                          {formatDate(event.event_date)}
                         </p>
 
                         <p className="flex items-center gap-2">
                           <Clock size={15} className="shrink-0 text-[#9a7b1d]" />
-                          {event.time}
+                          {formatTime(event.start_time, event.end_time)}
                         </p>
 
                         <p className="flex items-center gap-2">
@@ -157,7 +167,7 @@ export default function Events() {
                       </div>
 
                       <p className="mt-4 text-sm leading-6 text-[#59645c]">
-                        {event.description}
+                        {event.description || "Join us for this PLM BSA alumni event."}
                       </p>
 
                       <button
@@ -169,7 +179,8 @@ export default function Events() {
                       </button>
                     </div>
                   </article>
-                ))}
+                ))
+                )}
               </div>
 
               {/* CONTROLS */}
@@ -222,10 +233,10 @@ export default function Events() {
                   >
                     <div className="h-fit min-w-[52px] overflow-hidden rounded-md bg-white text-center shadow-sm">
                       <div className="bg-[#18392b] py-1 text-[9px] font-bold tracking-widest text-white">
-                        {event.month}
+                        {getMonth(event.event_date)}
                       </div>
                       <div className="px-2 py-2 font-serif text-xl font-bold text-[#18392b]">
-                        {event.day}
+                        {getDay(event.event_date)}
                       </div>
                     </div>
 
@@ -234,7 +245,7 @@ export default function Events() {
                         {event.title}
                       </h3>
                       <p className="mt-1 text-[11px] text-[#7a837d]">
-                        {event.date}
+                        {formatDate(event.event_date)}
                       </p>
                     </div>
                   </div>
