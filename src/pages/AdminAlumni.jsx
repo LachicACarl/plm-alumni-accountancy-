@@ -102,10 +102,6 @@ export default function AdminAlumni() {
     (alumni) => alumni.status === "Active"
   ).length;
 
-  const inactiveCount = alumniData.filter(
-    (alumni) => alumni.status === "Inactive"
-  ).length;
-
   const unknownCount = alumniData.filter(
     (alumni) => alumni.status === "Unknown"
   ).length;
