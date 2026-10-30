@@ -85,11 +85,6 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Enter a valid email address." }, 400, origin);
     }
 
-    const password = body.password;
-    if (typeof password !== "string" || password.length < 12 || password.length > 128) {
-      return jsonResponse({ error: "Temporary password must be between 12 and 128 characters." }, 400, origin);
-    }
-
     const firstName = cleanText(body.first_name, "First name", 80, true)!;
     const middleName = cleanText(body.middle_name, "Middle name", 80);
     const lastName = cleanText(body.last_name, "Last name", 80, true);
@@ -106,21 +101,20 @@ Deno.serve(async (req) => {
       }
     }
 
-    const { data: createdUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: false,
-      user_metadata: { first_name: firstName, middle_name: middleName, last_name: lastName },
+    const appOrigin = allowedOrigin.replace(/\/$/, "");
+    const { data: invitedUser, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+      data: { first_name: firstName, middle_name: middleName, last_name: lastName },
+      redirectTo: appOrigin + "/reset-password",
     });
 
-    if (createUserError || !createdUser.user) {
-      throw new Error(createUserError?.message || "Unable to create authentication user.");
+    if (inviteError || !invitedUser.user) {
+      throw new Error(inviteError?.message || "Unable to send alumni invitation.");
     }
 
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
       .insert({
-        id: createdUser.user.id,
+        id: invitedUser.user.id,
         first_name: firstName,
         middle_name: middleName,
         last_name: lastName,
@@ -135,7 +129,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (profileError) {
-      const { error: rollbackError } = await supabaseAdmin.auth.admin.deleteUser(createdUser.user.id);
+      const { error: rollbackError } = await supabaseAdmin.auth.admin.deleteUser(invitedUser.user.id);
       if (rollbackError) {
         console.error("Failed to roll back newly created auth user:", rollbackError);
       }
@@ -144,7 +138,7 @@ Deno.serve(async (req) => {
 
     return jsonResponse({
       success: true,
-      user: { id: createdUser.user.id, email: createdUser.user.email },
+      user: { id: invitedUser.user.id, email: invitedUser.user.email },
       profile,
     }, 201, origin);
   } catch (error) {
