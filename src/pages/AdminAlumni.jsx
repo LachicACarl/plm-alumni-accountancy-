@@ -24,6 +24,7 @@ export default function AdminAlumni() {
   const [error, setError] = useState("");
   const [selectedAlumni, setSelectedAlumni] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [updatingStatusId, setUpdatingStatusId] = useState(null);
 
   useEffect(() => {
     async function loadAlumni() {
@@ -105,6 +106,43 @@ export default function AdminAlumni() {
   const inactiveCount = alumniData.filter(
     (alumni) => alumni.status === "Inactive"
   ).length;
+
+  async function handleStatusToggle(alumni) {
+    if (updatingStatusId) return;
+
+    const nextStatus =
+      alumni.status === "Active" ? "inactive" : "active";
+
+    setUpdatingStatusId(alumni.id);
+    setError("");
+
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({ account_status: nextStatus })
+      .eq("id", alumni.id)
+      .eq("role", "alumni");
+
+    if (updateError) {
+      setError(`Unable to update ${alumni.name}'s status: ${updateError.message}`);
+      setUpdatingStatusId(null);
+      return;
+    }
+
+    const displayStatus = nextStatus === "active" ? "Active" : "Inactive";
+    setAlumniData((current) =>
+      current.map((record) =>
+        record.id === alumni.id
+          ? { ...record, status: displayStatus }
+          : record
+      )
+    );
+    setSelectedAlumni((current) =>
+      current?.id === alumni.id
+        ? { ...current, status: displayStatus }
+        : current
+    );
+    setUpdatingStatusId(null);
+  }
 
   const getInitials = (name) =>
     name
@@ -776,6 +814,18 @@ export default function AdminAlumni() {
                   This information is loaded from the alumni profile stored in
                   the PLM Alumni System database.
                 </p>
+                <button
+                  type="button"
+                  onClick={() => handleStatusToggle(selectedAlumni)}
+                  disabled={updatingStatusId === selectedAlumni.id}
+                  className="mt-4 rounded-xl border border-[#d8d2c2] px-4 py-2.5 text-sm font-bold text-[#18392b] transition hover:bg-[#f7f5ee] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {updatingStatusId === selectedAlumni.id
+                    ? "Updating..."
+                    : selectedAlumni.status === "Active"
+                      ? "Mark as Inactive"
+                      : "Mark as Active"}
+                </button>
               </div>
             </div>
           </div>
