@@ -48,9 +48,6 @@ export default function Credentials() {
   const [uploadError, setUploadError] = useState("");
 
   async function loadCredentials() {
-    setLoading(true);
-    setError("");
-
     try {
       const {
         data: { user },
