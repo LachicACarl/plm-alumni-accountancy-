@@ -77,7 +77,41 @@ export default function Credentials() {
   }
 
   useEffect(() => {
-    loadCredentials();
+    let active = true;
+
+    supabase.auth
+      .getUser()
+      .then(({ data, error: authError }) => {
+        if (authError) throw authError;
+        const user = data?.user;
+        if (!user) {
+          throw new Error("Your session has expired. Please log in again.");
+        }
+
+        return supabase
+          .from("credentials")
+          .select(
+            "id, credential_type, file_url, status, remarks, verified_at, created_at"
+          )
+          .eq("profile_id", user.id)
+          .order("created_at", { ascending: false });
+      })
+      .then(({ data, error: credentialsError }) => {
+        if (credentialsError) throw credentialsError;
+        if (active) setCredentials(data ?? []);
+      })
+      .catch((loadError) => {
+        if (active) {
+          setError(loadError.message || "Unable to load your credentials.");
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const verifiedCount = credentials.filter(

@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { ArrowLeft, Eye, EyeOff, LockKeyhole } from "lucide-react";
 import plmCampus from "../assets/plm-campus.jpg";
 import plmLogo from "../../assets/plm-accountancy-logo.svg";
 import { supabase } from "../lib/supabase";
 
 export default function PasswordReset() {
-  const navigate = useNavigate();
   const [recoveryReady, setRecoveryReady] = useState(false);
   const [checking, setChecking] = useState(true);
   const [password, setPassword] = useState("");

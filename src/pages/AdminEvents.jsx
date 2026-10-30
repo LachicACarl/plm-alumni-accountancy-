@@ -60,7 +60,35 @@ export default function AdminEvents() {
   }
 
   useEffect(() => {
-    loadEvents();
+    let active = true;
+
+    supabase
+      .from("events")
+      .select("*")
+      .order("event_date", { ascending: true })
+      .order("start_time", { ascending: true })
+      .then(({ data, error: fetchError }) => {
+        if (!active) return;
+
+        if (fetchError) {
+          setError(fetchError.message);
+          setEvents([]);
+        } else {
+          setEvents(data ?? []);
+        }
+      })
+      .catch((fetchError) => {
+        if (!active) return;
+        setError(fetchError.message || "Unable to load events.");
+        setEvents([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   function resetForm() {

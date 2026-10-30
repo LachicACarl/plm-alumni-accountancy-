@@ -64,7 +64,36 @@ export default function AdminBatches() {
   }
 
   useEffect(() => {
-    loadBatches();
+    let active = true;
+
+    supabase
+      .from("batches")
+      .select("*")
+      .order("year", { ascending: false })
+      .then(({ data, error }) => {
+        if (!active) return;
+
+        if (error) {
+          console.error(error);
+          setMessage(error.message);
+          setBatches([]);
+        } else {
+          setBatches(data ?? []);
+        }
+      })
+      .catch((error) => {
+        if (!active) return;
+        console.error(error);
+        setMessage(error.message || "Unable to load batches.");
+        setBatches([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   function resetForm() {

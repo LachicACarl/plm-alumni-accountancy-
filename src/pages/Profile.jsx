@@ -27,46 +27,52 @@ export default function Profile() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  async function loadProfile() {
-    try {
-      setLoading(true);
-      setError("");
-
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        throw new Error("Your alumni session could not be found.");
-      }
-
-      const { data, error: profileError } = await supabase
-        .from("profiles")
-        .select(
-          "first_name, middle_name, last_name, email, phone, address, student_number, graduation_year, profession, company, bio, role"
-        )
-        .eq("id", user.id)
-        .single();
-
-      if (profileError) throw profileError;
-
-      const loadedProfile = {
-        ...data,
-        email: data.email || user.email || "",
-      };
-
-      setProfile(loadedProfile);
-      setForm(loadedProfile);
-    } catch (loadError) {
-      console.error("Unable to load alumni profile:", loadError);
-      setError(loadError.message || "Unable to load your alumni profile.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   useEffect(() => {
-    loadProfile();
+    let active = true;
+
+    supabase.auth
+      .getUser()
+      .then(({ data, error: authError }) => {
+        if (authError) throw authError;
+        const user = data?.user;
+
+        if (!user) {
+          throw new Error("Your alumni session could not be found.");
+        }
+
+        return supabase
+          .from("profiles")
+          .select(
+            "first_name, middle_name, last_name, email, phone, address, student_number, graduation_year, profession, company, bio, role"
+          )
+          .eq("id", user.id)
+          .single()
+          .then(({ data: profileData, error: profileError }) => {
+            if (profileError) throw profileError;
+
+            return {
+              ...profileData,
+              email: profileData.email || user.email || "",
+            };
+          });
+      })
+      .then((loadedProfile) => {
+        if (!active) return;
+        setProfile(loadedProfile);
+        setForm(loadedProfile);
+      })
+      .catch((loadError) => {
+        if (!active) return;
+        console.error("Unable to load alumni profile:", loadError);
+        setError(loadError.message || "Unable to load your alumni profile.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   function handleChange(event) {
