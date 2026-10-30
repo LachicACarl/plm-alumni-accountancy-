@@ -266,7 +266,7 @@ export default function Home() {
             <div className="min-h-[230px] bg-black/10">
 
               <img
-                src=eventImage
+                src={eventImage}
                 alt="Featured BSA alumnus"
                 className="h-full min-h-[230px] w-full object-cover"
               />
