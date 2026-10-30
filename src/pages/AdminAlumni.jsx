@@ -33,7 +33,7 @@ export default function AdminAlumni() {
       const { data, error: alumniError } = await supabase
         .from("profiles")
         .select(
-          "id, student_number, first_name, middle_name, last_name, email, graduation_year, profession, company, role, created_at"
+          "id, student_number, first_name, middle_name, last_name, email, graduation_year, profession, company, role, account_status, created_at"
         )
         .eq("role", "alumni")
         .order("last_name", { ascending: true });
@@ -50,21 +50,21 @@ export default function AdminAlumni() {
         name: [alumni.first_name, alumni.middle_name, alumni.last_name]
           .filter(Boolean)
           .join(" "),
-        studentNumber: alumni.student_number || "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â",
+        studentNumber: alumni.student_number || "—",
         batch: alumni.graduation_year
           ? String(alumni.graduation_year)
-          : "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â",
+          : "—",
         profession: alumni.profession || "Not specified",
         company: alumni.company || "Not specified",
         email: alumni.email || "",
-        status: "Active",
+        status: alumni.account_status === "inactive" ? "Inactive" : "Active",
       }));
 
       const years = [
         ...new Set(
           formatted
             .map((alumni) => alumni.batch)
-            .filter((year) => year !== "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â")
+            .filter((year) => year !== "—")
         ),
       ].sort((a, b) => Number(b) - Number(a));
 
@@ -200,7 +200,7 @@ export default function AdminAlumni() {
                 </p>
 
                 <p className="mt-1 font-serif text-2xl font-bold">
-                  {loading ? "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â" : alumniData.length}
+                  {loading ? "—" : alumniData.length}
                 </p>
               </div>
             </div>
@@ -218,7 +218,7 @@ export default function AdminAlumni() {
                 </p>
 
                 <p className="mt-1 font-serif text-2xl font-bold">
-                  {loading ? "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â" : activeCount}
+                  {loading ? "—" : activeCount}
                 </p>
               </div>
             </div>
@@ -236,7 +236,7 @@ export default function AdminAlumni() {
                 </p>
 
                 <p className="mt-1 font-serif text-2xl font-bold">
-                  {loading ? "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â" : inactiveCount}
+                  {loading ? "—" : inactiveCount}
                 </p>
               </div>
             </div>
@@ -312,8 +312,8 @@ export default function AdminAlumni() {
               </h2>
 
               <p className="mt-1 text-xs text-gray-500">
-                Showing {loading ? "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â" : filteredAlumni.length} of{" "}
-                {loading ? "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â" : alumniData.length} records
+                Showing {loading ? "—" : filteredAlumni.length} of{" "}
+                {loading ? "—" : alumniData.length} records
               </p>
             </div>
 
@@ -376,7 +376,7 @@ export default function AdminAlumni() {
 
                       <td className="px-5 py-4">
                         <span className="inline-flex rounded-full bg-[#fff7df] px-3 py-1 text-xs font-bold text-[#806612]">
-                          {alumni.batch === "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"
+                          {alumni.batch === "—"
                             ? "Batch not set"
                             : "BSA " + alumni.batch}
                         </span>
@@ -646,9 +646,7 @@ export default function AdminAlumni() {
                   </p>
 
                   <p className="mt-1 text-xs leading-5 text-gray-500">
-                    The alumni login account will be connected through
-                    Supabase Authentication in the next step. This form
-                    currently prepares the profile information only.
+                    This action creates an alumni sign-in account in Supabase Authentication and saves the matching alumni profile. Share the temporary password securely and ask the alumnus to change it after signing in.
                   </p>
                 </div>
 
@@ -785,7 +783,7 @@ export default function AdminAlumni() {
         <footer className="mt-10 border-t border-[#ddd7c8] py-6">
           <div className="flex flex-col gap-2 text-xs text-gray-400 sm:flex-row sm:items-center sm:justify-between">
             <p>
-              Ãƒâ€šÃ‚Â© 2026 PLM College of Accountancy ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â BSA Alumni System
+              © 2026 PLM College of Accountancy — BSA Alumni System
             </p>
 
             <Link
