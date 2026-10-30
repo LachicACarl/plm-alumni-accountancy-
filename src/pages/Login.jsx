@@ -8,7 +8,7 @@ import {
   UserRound,
 } from "lucide-react";
 import plmCampus from "../assets/plm-campus.jpg";
-import plmLogo from "../../assets/plm-accountancy-logo.svg";
+import plmLogo from "../../assets/plm-accountancy-logo.png";
 import { supabase } from "../lib/supabase";
 
 export default function Login() {
