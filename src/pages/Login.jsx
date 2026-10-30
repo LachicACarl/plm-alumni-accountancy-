@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -19,6 +19,11 @@ export default function Login() {
   const [remember, setRemember] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [showRecovery, setShowRecovery] = useState(false);
+  const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
+  const [recoveryMessage, setRecoveryMessage] = useState("");
+  const [recoveryError, setRecoveryError] = useState("");
 
 
   async function handleSubmit(event) {
@@ -70,7 +75,37 @@ export default function Login() {
   }
 
   function handleForgotPassword() {
-    setError("Password recovery will be connected to the backend later.");
+    setError("");
+    setRecoveryError("");
+    setRecoveryMessage("");
+    setRecoveryEmail(username.trim().includes("@") ? username.trim() : "");
+    setShowRecovery(true);
+  }
+
+  async function handleRecoverySubmit(event) {
+    event.preventDefault();
+    setRecoveryError("");
+    setRecoveryMessage("");
+    const email = recoveryEmail.trim();
+
+    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+      setRecoveryError("Enter a valid registered email address.");
+      return;
+    }
+
+    setRecoveryLoading(true);
+    try {
+      const { error: requestError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (requestError) throw requestError;
+      setRecoveryMessage("If an account exists for that email, a password reset link has been sent.");
+    } catch (requestError) {
+      console.error("Password recovery request failed:", requestError);
+      setRecoveryError(requestError.message || "Unable to send the password reset email. Please try again later.");
+    } finally {
+      setRecoveryLoading(false);
+    }
   }
 
   function handleRegister() {
@@ -254,6 +289,34 @@ export default function Login() {
                     </div>
 
                     {/* Form */}
+                    {showRecovery ? (
+                      <form onSubmit={handleRecoverySubmit} className="space-y-4">
+                        <div>
+                          <h3 className="font-serif text-2xl font-semibold text-[#28583e]">Reset your password</h3>
+                          <p className="mt-2 text-sm leading-6 text-[#68776f]">Enter the email address associated with your alumni account. We’ll send a secure reset link if the account is eligible.</p>
+                        </div>
+                        <input
+                          id="recovery-email"
+                          name="recovery-email"
+                          type="email"
+                          autoComplete="email"
+                          required
+                          value={recoveryEmail}
+                          onChange={(event) => setRecoveryEmail(event.target.value)}
+                          placeholder="Registered email address"
+                          disabled={recoveryLoading || Boolean(recoveryMessage)}
+                          className="h-14 w-full rounded-xl border border-[#a8afa9] bg-white/75 px-4 text-sm text-[#263129] outline-none focus:border-[#4f9364] focus:ring-4 focus:ring-[#4f9364]/10 disabled:opacity-60"
+                        />
+                        {recoveryError && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{recoveryError}</div>}
+                        {recoveryMessage && <div role="status" className="rounded-xl border border-[#b8d7b9] bg-[#edf8ee] px-4 py-3 text-sm text-[#286044]">{recoveryMessage}</div>}
+                        {!recoveryMessage && (
+                          <button type="submit" disabled={recoveryLoading} className="h-14 w-full rounded-xl bg-gradient-to-r from-[#dfbb4c] via-[#aabd68] to-[#63a375] text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">
+                            {recoveryLoading ? "Sending..." : "Send reset link"}
+                          </button>
+                        )}
+                        <button type="button" disabled={recoveryLoading} onClick={() => { setShowRecovery(false); setRecoveryError(""); setRecoveryMessage(""); }} className="w-full text-sm font-semibold text-[#28583e] hover:text-[#a27e19] disabled:opacity-60">Back to login</button>
+                      </form>
+                    ) : (
                     <form onSubmit={handleSubmit} className="space-y-4">
 
                       {/* Username */}
@@ -357,6 +420,7 @@ export default function Login() {
                         <span className="relative">Log In</span>
                       </button>
                     </form>
+                    )}
 
                     {/* Registration */}
                     <div className="mt-5 text-center">

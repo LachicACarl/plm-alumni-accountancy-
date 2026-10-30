@@ -4,6 +4,7 @@ import Batches from "./pages/Batches";
 import Events from "./pages/Events";
 import Alumni from "./pages/Alumni";
 import Login from "./pages/Login";
+import PasswordReset from "./pages/PasswordReset";
 import AdminLogin from "./pages/AdminLogin";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
@@ -29,6 +30,7 @@ export default function App() {
         <Route path="/events" element={<Events />} />
 
         <Route path="/login" element={<Login />} />
+        <Route path="/reset-password" element={<PasswordReset />} />
         <Route path="/admin/login" element={<AdminLogin />} />
 
         <Route
