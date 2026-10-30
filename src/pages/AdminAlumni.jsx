@@ -488,7 +488,6 @@ export default function AdminAlumni() {
 
                   const payload = {
                     email: String(formData.get("email") || "").trim(),
-                    password: String(formData.get("password") || ""),
                     first_name: String(formData.get("first_name") || "").trim(),
                     middle_name: "",
                     last_name: String(formData.get("last_name") || "").trim(),
@@ -499,10 +498,6 @@ export default function AdminAlumni() {
                   };
 
                   try {
-                    if (payload.password.length < 12 || payload.password.length > 128) {
-                      throw new Error("Temporary password must be between 12 and 128 characters.");
-                    }
-
                     const { data, error } = await supabase.functions.invoke(
                       "create-alumni",
                       { body: payload }
@@ -529,7 +524,7 @@ export default function AdminAlumni() {
                       );
                     }
 
-                    alert("Alumni account created successfully.");
+                    alert("Alumni invitation sent successfully. The alumnus can use the email link to confirm their account and set a password.");
                     form.reset();
                     setShowAddModal(false);
                     window.location.reload();
@@ -605,21 +600,6 @@ export default function AdminAlumni() {
                     />
                   </div>
 
-                  <div className="sm:col-span-2">
-                    <label className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
-                      Temporary Password
-                    </label>
-                    <input
-                      type="password"
-                      name="password"
-                      placeholder="12–128 characters"
-                      minLength={12}
-                      maxLength={128}
-                      autoComplete="new-password"
-                      required
-                      className="w-full rounded-xl border border-[#d8d2c2] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#18392b] focus:ring-2 focus:ring-[#18392b]/10"
-                    />
-                  </div>
 
                   <div>
                     <label className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
