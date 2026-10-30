@@ -57,7 +57,7 @@ export default function AdminAlumni() {
         profession: alumni.profession || "Not specified",
         company: alumni.company || "Not specified",
         email: alumni.email || "",
-        status: "Active",
+        status: alumni.account_status === "inactive" ? "Inactive" : "Active",
       }));
 
       const years = [
@@ -632,9 +632,7 @@ export default function AdminAlumni() {
                   </p>
 
                   <p className="mt-1 text-xs leading-5 text-gray-500">
-                    The alumni login account will be connected through
-                    Supabase Authentication in the next step. This form
-                    currently prepares the profile information only.
+                    An invitation email will be sent after the alumni profile is saved. They can use the secure email link to set their initial password.
                   </p>
                 </div>
 
