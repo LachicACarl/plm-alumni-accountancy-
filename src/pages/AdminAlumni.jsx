@@ -57,7 +57,7 @@ export default function AdminAlumni() {
         profession: alumni.profession || "Not specified",
         company: alumni.company || "Not specified",
         email: alumni.email || "",
-        status: "Unknown",
+        status: alumni.account_status === "inactive" ? "Inactive" : "Active",
       }));
 
       const years = [
