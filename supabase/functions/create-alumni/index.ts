@@ -102,19 +102,23 @@ Deno.serve(async (req) => {
     }
 
     const appOrigin = allowedOrigin.replace(/\/$/, "");
-    const { data: invitedUser, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      data: { first_name: firstName, middle_name: middleName, last_name: lastName },
-      redirectTo: appOrigin + "/reset-password",
+
+    // Create a confirmed=false auth identity without emailing first. The profile
+    // must exist before a usable invitation is delivered to the recipient.
+    const { data: createdUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      email_confirm: false,
+      user_metadata: { first_name: firstName, middle_name: middleName, last_name: lastName },
     });
 
-    if (inviteError || !invitedUser.user) {
-      throw new Error(inviteError?.message || "Unable to send alumni invitation.");
+    if (createError || !createdUser.user) {
+      throw new Error(createError?.message || "Unable to create alumni account.");
     }
 
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
       .insert({
-        id: invitedUser.user.id,
+        id: createdUser.user.id,
         first_name: firstName,
         middle_name: middleName,
         last_name: lastName,
@@ -129,16 +133,38 @@ Deno.serve(async (req) => {
       .single();
 
     if (profileError) {
-      const { error: rollbackError } = await supabaseAdmin.auth.admin.deleteUser(invitedUser.user.id);
+      const { error: rollbackError } = await supabaseAdmin.auth.admin.deleteUser(createdUser.user.id);
       if (rollbackError) {
         console.error("Failed to roll back newly created auth user:", rollbackError);
       }
       throw new Error(profileError.message);
     }
 
+    // Profile exists now; send the invitation that lets the alumnus set
+    // their password. Roll back both records if the invite cannot be sent.
+    const { data: invitedUser, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+      data: { first_name: firstName, middle_name: middleName, last_name: lastName },
+      redirectTo: appOrigin + "/reset-password",
+    });
+
+    if (inviteError || !invitedUser.user) {
+      const { error: profileRollbackError } = await supabaseAdmin
+        .from("profiles")
+        .delete()
+        .eq("id", createdUser.user.id);
+      const { error: authRollbackError } = await supabaseAdmin.auth.admin.deleteUser(createdUser.user.id);
+      if (profileRollbackError) {
+        console.error("Failed to roll back alumni profile after invitation failure:", profileRollbackError);
+      }
+      if (authRollbackError) {
+        console.error("Failed to roll back auth user after invitation failure:", authRollbackError);
+      }
+      throw new Error(inviteError?.message || "Unable to send alumni invitation.");
+    }
+
     return jsonResponse({
       success: true,
-      user: { id: invitedUser.user.id, email: invitedUser.user.email },
+      user: { id: createdUser.user.id, email: createdUser.user.email },
       profile,
     }, 201, origin);
   } catch (error) {
