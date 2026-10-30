@@ -57,7 +57,7 @@ export default function AdminAlumni() {
         profession: alumni.profession || "Not specified",
         company: alumni.company || "Not specified",
         email: alumni.email || "",
-        status: "Active",
+        status: "Unknown",
       }));
 
       const years = [
@@ -104,6 +104,10 @@ export default function AdminAlumni() {
 
   const inactiveCount = alumniData.filter(
     (alumni) => alumni.status === "Inactive"
+  ).length;
+
+  const unknownCount = alumniData.filter(
+    (alumni) => alumni.status === "Unknown"
   ).length;
 
   const getInitials = (name) =>
@@ -232,11 +236,11 @@ export default function AdminAlumni() {
 
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">
-                  Inactive Alumni
+                  Status Not Configured
                 </p>
 
                 <p className="mt-1 font-serif text-2xl font-bold">
-                  {loading ? "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â" : inactiveCount}
+                  {loading ? "—" : unknownCount}
                 </p>
               </div>
             </div>
@@ -296,6 +300,7 @@ export default function AdminAlumni() {
               <option value="All">All Status</option>
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
+              <option value="Unknown">Not configured</option>
             </select>
           </div>
         </section>
@@ -396,7 +401,9 @@ export default function AdminAlumni() {
                             "inline-flex rounded-full px-3 py-1 text-xs font-bold " +
                             (alumni.status === "Active"
                               ? "bg-[#eef5ef] text-[#286044]"
-                              : "bg-gray-100 text-gray-500")
+                              : alumni.status === "Inactive"
+                                ? "bg-red-50 text-red-700"
+                                : "bg-amber-50 text-amber-700")
                           }
                         >
                           {alumni.status}
