@@ -566,7 +566,7 @@ export default function AdminEvents() {
                   >
                     <div className="grid md:grid-cols-[190px_minmax(0,1fr)]">
                       <div className="h-44 bg-[#e8ece7] md:h-full">
-                        {event.image_url && /^https?:\\/\\//i.test(event.image_url.trim()) ? (
+                        {(event.image_url?.trim().startsWith("https://") || event.image_url?.trim().startsWith("http://")) ? (
                           <img
                             src={event.image_url}
                             alt={event.title}
