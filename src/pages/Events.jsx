@@ -127,11 +127,15 @@ export default function Events() {
                       <img
                         src={
                           typeof event.image_url === "string" &&
-                          (event.image_url.trim().startsWith("https://") || event.image_url.trim().startsWith("http://"))
+                          /^https?:\/\//i.test(event.image_url.trim())
                             ? event.image_url.trim()
                             : eventImage
                         }
                         alt={event.title}
+                        onError={(imageEvent) => {
+                          imageEvent.currentTarget.onerror = null;
+                          imageEvent.currentTarget.src = eventImage;
+                        }}
                         className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                       />
 
