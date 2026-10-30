@@ -127,8 +127,8 @@ export default function Events() {
                       <img
                         src={
                           typeof event.image_url === "string" &&
-                          /^(https?:\/\/|\/)/i.test(event.image_url)
-                            ? event.image_url
+                          (event.image_url.trim().startsWith("https://") || event.image_url.trim().startsWith("http://"))
+                            ? event.image_url.trim()
                             : eventImage
                         }
                         alt={event.title}
