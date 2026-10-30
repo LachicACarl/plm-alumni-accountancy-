@@ -125,7 +125,12 @@ export default function Events() {
                   >
                     <div className="relative h-[185px] overflow-hidden bg-[#dfe5df]">
                       <img
-                        src={event.image_url || eventImage}
+                        src={
+                          typeof event.image_url === "string" &&
+                          /^(https?:\/\/|\/)/i.test(event.image_url)
+                            ? event.image_url
+                            : eventImage
+                        }
                         alt={event.title}
                         className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                       />
