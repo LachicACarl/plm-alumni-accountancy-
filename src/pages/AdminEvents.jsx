@@ -40,9 +40,6 @@ export default function AdminEvents() {
   const [success, setSuccess] = useState("");
 
   async function loadEvents() {
-    setLoading(true);
-    setError("");
-
     const { data, error: fetchError } = await supabase
       .from("events")
       .select("*")
