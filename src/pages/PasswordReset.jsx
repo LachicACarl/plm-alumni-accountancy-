@@ -20,10 +20,14 @@ export default function PasswordReset() {
     let active = true;
     let timeoutId;
 
+    // Only accept a signed-in event when Supabase returned from an invite link.
+    // Ordinary pre-existing sessions must not unlock password changes.
+    const inviteFlow = new URLSearchParams(window.location.hash.replace(/^#/, "")).get("type") === "invite";
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (!active) return;
-        if (event === "PASSWORD_RECOVERY" && session) {
+        if ((event === "PASSWORD_RECOVERY" || (inviteFlow && event === "SIGNED_IN")) && session) {
           window.clearTimeout(timeoutId);
           setRecoveryReady(true);
           setChecking(false);
@@ -32,7 +36,7 @@ export default function PasswordReset() {
       }
     );
 
-    // A normal existing session is deliberately not accepted as proof of recovery.
+    // A normal existing session is deliberately not accepted as proof of recovery or invitation.
     timeoutId = window.setTimeout(() => {
       if (!active) return;
       setChecking(false);
