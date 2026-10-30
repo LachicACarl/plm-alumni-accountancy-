@@ -44,9 +44,6 @@ export default function AdminBatches() {
   const fileInputRef = useRef(null);
 
   async function loadBatches() {
-    setLoading(true);
-    setMessage("");
-
     const { data, error } = await supabase
       .from("batches")
       .select("*")
