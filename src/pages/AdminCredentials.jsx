@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -13,62 +13,96 @@ import {
   FileText,
   Filter,
 } from "lucide-react";
+import { supabase } from "../lib/supabase";
 
-const credentialData = [
-  {
-    id: 1,
-    alumni: "Maria Santos",
-    studentNumber: "2021-00125",
-    type: "CPA Certificate",
-    submitted: "May 20, 2026",
-    status: "Pending",
-  },
-  {
-    id: 2,
-    alumni: "John Reyes",
-    studentNumber: "2020-00418",
-    type: "Certificate of Graduation",
-    submitted: "May 18, 2026",
-    status: "Verified",
-  },
-  {
-    id: 3,
-    alumni: "Angela Cruz",
-    studentNumber: "2019-00831",
-    type: "Academic Transcript",
-    submitted: "May 17, 2026",
-    status: "Pending",
-  },
-  {
-    id: 4,
-    alumni: "Carlos Mendoza",
-    studentNumber: "2018-00642",
-    type: "CPA Certificate",
-    submitted: "May 15, 2026",
-    status: "Rejected",
-  },
-  {
-    id: 5,
-    alumni: "Sofia Garcia",
-    studentNumber: "2017-00317",
-    type: "Certificate of Graduation",
-    submitted: "May 12, 2026",
-    status: "Verified",
-  },
-  {
-    id: 6,
-    alumni: "Daniel Flores",
-    studentNumber: "2016-00924",
-    type: "Academic Transcript",
-    submitted: "May 10, 2026",
-    status: "Pending",
-  },
-];
+const BUCKET = "alumni-credentials";
+const CREDENTIAL_PAGE_SIZE = 1000;
+
+function formatStatus(status) {
+  return status ? status.charAt(0).toUpperCase() + status.slice(1) : "Unknown";
+}
+
+function formatDate(value) {
+  if (!value) return "Date unavailable";
+
+  return new Date(value).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 export default function AdminCredentials() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
-  const [credentials, setCredentials] = useState(credentialData);
+  const [credentials, setCredentials] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [updatingId, setUpdatingId] = useState(null);
+  const [viewingId, setViewingId] = useState(null);
+
+  async function loadCredentials() {
+    setLoading(true);
+    setError("");
+
+    try {
+      const records = [];
+      let rangeStart = 0;
+
+      while (true) {
+        const { data, error: credentialsError } = await supabase
+          .from("credentials")
+          .select(
+            "id, profile_id, credential_type, file_url, status, created_at, profiles(first_name, middle_name, last_name, student_number)"
+          )
+          .order("created_at", { ascending: false })
+          .range(rangeStart, rangeStart + CREDENTIAL_PAGE_SIZE - 1);
+
+        if (credentialsError) throw credentialsError;
+
+        records.push(...(data ?? []));
+
+        if (!data || data.length < CREDENTIAL_PAGE_SIZE) break;
+        rangeStart += CREDENTIAL_PAGE_SIZE;
+      }
+
+      setCredentials(
+        records.map((credential) => {
+          const profile = credential.profiles;
+          const alumni = [
+            profile?.first_name,
+            profile?.middle_name,
+            profile?.last_name,
+          ]
+            .filter(Boolean)
+            .join(" ");
+
+          return {
+            ...credential,
+            alumni: alumni || "Unknown alumnus",
+            studentNumber: profile?.student_number || "Student number unavailable",
+            type: credential.credential_type,
+            submitted: formatDate(credential.created_at),
+            status: formatStatus(credential.status),
+          };
+        })
+      );
+    } catch (loadError) {
+      console.error("Unable to load credential records:", loadError);
+      setError(loadError.message || "Unable to load credential records.");
+      setCredentials([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      loadCredentials();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
 
   const filteredCredentials = useMemo(() => {
     return credentials.filter((credential) => {
@@ -86,12 +120,76 @@ export default function AdminCredentials() {
     });
   }, [credentials, search, filter]);
 
-  const updateStatus = (id, status) => {
-    setCredentials((current) =>
-      current.map((credential) =>
-        credential.id === id ? { ...credential, status } : credential
-      )
-    );
+  async function updateStatus(credential, status) {
+    if (updatingId || credential.status !== "Pending") return;
+
+    setUpdatingId(credential.id);
+    setError("");
+
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError) throw userError;
+      if (!user) throw new Error("Your administrator session has expired.");
+
+      const { data: updatedRows, error: updateError } = await supabase
+        .from("credentials")
+        .update({
+          status: status.toLowerCase(),
+          verified_by: user.id,
+          verified_at: new Date().toISOString(),
+        })
+        .eq("id", credential.id)
+        .eq("status", "pending")
+        .select("id");
+
+      if (updateError) throw updateError;
+      if (!updatedRows || updatedRows.length === 0) {
+        throw new Error("This credential was already processed. Refreshing the queue.");
+      }
+
+      await loadCredentials();
+    } catch (updateError) {
+      console.error("Unable to update credential status:", updateError);
+      setError(updateError.message || "Unable to update credential status.");
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
+  async function handleView(credential) {
+    if (viewingId) return;
+
+    setViewingId(credential.id);
+    setError("");
+
+    const credentialWindow = window.open("about:blank", "_blank");
+
+    if (!credentialWindow) {
+      setError("Please allow pop-ups to view this credential file.");
+      setViewingId(null);
+      return;
+    }
+
+    try {
+      const { data, error: signedUrlError } = await supabase.storage
+        .from(BUCKET)
+        .createSignedUrl(credential.file_url, 60);
+
+      if (signedUrlError) throw signedUrlError;
+      if (!data?.signedUrl) throw new Error("Credential file URL was not created.");
+
+      credentialWindow.location.href = data.signedUrl;
+    } catch (viewError) {
+      credentialWindow.close();
+      console.error("Unable to view credential file:", viewError);
+      setError(viewError.message || "Unable to view this credential file.");
+    } finally {
+      setViewingId(null);
+    }
   };
 
   const pendingCount = credentials.filter(
@@ -194,6 +292,12 @@ export default function AdminCredentials() {
             </div>
           </div>
         </div>
+
+        {error && (
+          <div className="mb-7 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+            {error}
+          </div>
+        )}
 
         {/* Verification Summary */}
         <section className="grid gap-4 sm:grid-cols-3">
@@ -343,7 +447,15 @@ export default function AdminCredentials() {
               </thead>
 
               <tbody className="divide-y divide-[#eee9df]">
-                {filteredCredentials.map((credential) => (
+                {loading && (
+                  <tr>
+                    <td colSpan="5" className="px-5 py-16 text-center text-sm text-gray-500">
+                      Loading credential records...
+                    </td>
+                  </tr>
+                )}
+
+                {!loading && filteredCredentials.map((credential) => (
                   <tr
                     key={credential.id}
                     className="group transition hover:bg-[#fbfaf6]"
@@ -406,19 +518,20 @@ export default function AdminCredentials() {
                       <div className="flex justify-end gap-2">
                         <button
                           type="button"
+                          onClick={() => handleView(credential)}
+                          disabled={viewingId === credential.id}
                           className="inline-flex items-center gap-1.5 rounded-xl border border-[#d8d2c2] px-3 py-2 text-xs font-bold text-[#18392b] transition hover:border-[#18392b] hover:bg-[#f7f5ee]"
                         >
                           <Eye size={15} />
-                          View
+                          {viewingId === credential.id ? "Opening..." : "View"}
                         </button>
 
                         {credential.status === "Pending" && (
                           <>
                             <button
                               type="button"
-                              onClick={() =>
-                                updateStatus(credential.id, "Verified")
-                              }
+                              onClick={() => updateStatus(credential, "Verified")}
+                              disabled={updatingId === credential.id}
                               className="inline-flex items-center gap-1.5 rounded-xl bg-[#286044] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#1f4d35]"
                             >
                               <CheckCircle2 size={15} />
@@ -427,9 +540,8 @@ export default function AdminCredentials() {
 
                             <button
                               type="button"
-                              onClick={() =>
-                                updateStatus(credential.id, "Rejected")
-                              }
+                              onClick={() => updateStatus(credential, "Rejected")}
+                              disabled={updatingId === credential.id}
                               className="inline-flex items-center gap-1.5 rounded-xl bg-[#a43a3a] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#8d3030]"
                             >
                               <XCircle size={15} />
@@ -442,7 +554,7 @@ export default function AdminCredentials() {
                   </tr>
                 ))}
 
-                {filteredCredentials.length === 0 && (
+                {!loading && filteredCredentials.length === 0 && (
                   <tr>
                     <td colSpan="5" className="px-5 py-16 text-center">
                       <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#eee9dc] text-[#18392b]">

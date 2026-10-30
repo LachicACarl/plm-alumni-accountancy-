@@ -23,6 +23,45 @@ src/lib/seed.sql
 
 Supabase Authentication will be used for alumni, admin, and head-admin accounts.
 
+### Password recovery
+
+The login page sends reset emails with a redirect to:
+
+```text
+https://your-frontend-host/reset-password
+```
+
+In Supabase Dashboard, open **Authentication > URL Configuration** and add
+the deployed URL above to **Redirect URLs**. For local testing, also add:
+
+```text
+http://localhost:5173/reset-password
+```
+
+If the development server uses another origin or port, add that exact URL
+instead. The frontend does not require a service-role key for this flow.
+Confirm that an email provider is enabled and that the reset-email template
+uses the Supabase recovery link. These dashboard settings must be applied
+manually; the application does not change production Auth configuration.
+
+## Frontend environment variables
+
+Create a local `.env` file by copying `.env.example`, then set:
+
+```text
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+VITE_SUPABASE_ANON_KEY=your-supabase-publishable-or-anon-key
+```
+
+These variables are read by Vite during the build. They must be configured in
+the hosting platform's project settings as build-time environment variables
+before starting a new production deployment. After saving them, trigger a
+fresh deployment so the values are embedded in the new frontend build.
+
+Use only the Supabase publishable/anon key in frontend variables. Never add
+`SUPABASE_SERVICE_ROLE_KEY` or any other server secret to `.env`, hosting
+frontend variables, or source code.
+
 ## Security
 
 Row Level Security (RLS) should be enabled before production deployment.

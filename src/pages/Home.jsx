@@ -288,12 +288,6 @@ export default function Home() {
                 professional I am today.”
               </p>
 
-              <button
-                type="button"
-                className="mt-6 w-fit self-end rounded-lg border border-white/70 px-6 py-2 font-serif text-xs font-semibold transition hover:bg-white hover:text-[#234a34]"
-              >
-                Read Their Stories
-              </button>
             </div>
 
           </div>

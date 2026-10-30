@@ -1,4 +1,5 @@
 ﻿import { NavLink, Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import {
   Award,
   CalendarDays,
@@ -10,9 +11,12 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { supabase } from "../lib/supabase";
 
 export default function DashboardSidebar({ mobileOpen = false, onClose }) {
   const navigate = useNavigate();
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
 
   const links = [
     {
@@ -47,7 +51,21 @@ export default function DashboardSidebar({ mobileOpen = false, onClose }) {
     },
   ];
 
-  function handleLogout() {
+  async function handleLogout() {
+    if (loggingOut) return;
+
+    setLoggingOut(true);
+    setLogoutError("");
+
+    const { error } = await supabase.auth.signOut({ scope: "local" });
+
+    if (error) {
+      console.error("Unable to sign out alumni:", error);
+      setLogoutError("Unable to sign out. Please try again.");
+      setLoggingOut(false);
+      return;
+    }
+
     localStorage.removeItem("alumniLoggedIn");
     localStorage.removeItem("alumniUser");
     localStorage.removeItem("alumniRemembered");
@@ -130,6 +148,12 @@ export default function DashboardSidebar({ mobileOpen = false, onClose }) {
         </nav>
 
         <div className="border-t border-white/10 p-4">
+          {logoutError && (
+            <p className="mb-3 rounded-lg border border-red-200/20 bg-red-500/10 px-3 py-2 text-xs text-red-100">
+              {logoutError}
+            </p>
+          )}
+
           <Link
             to="/"
             onClick={onClose}
@@ -142,10 +166,11 @@ export default function DashboardSidebar({ mobileOpen = false, onClose }) {
           <button
             type="button"
             onClick={handleLogout}
+            disabled={loggingOut}
             className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-white/70 transition hover:bg-red-500/15 hover:text-red-200"
           >
             <LogOut size={19} />
-            Sign Out
+            {loggingOut ? "Signing Out..." : "Sign Out"}
           </button>
         </div>
       </aside>

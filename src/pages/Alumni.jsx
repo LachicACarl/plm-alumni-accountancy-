@@ -280,13 +280,6 @@ export default function Alumni() {
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        className="mt-7 flex w-full items-center justify-center gap-2 rounded-xl border border-[#18392b] px-4 py-3 text-sm font-semibold text-[#18392b] transition hover:bg-[#18392b] hover:text-white"
-                      >
-                        View Profile
-                        <ArrowRight size={16} />
-                      </button>
                     </div>
                   </article>
                 ))}

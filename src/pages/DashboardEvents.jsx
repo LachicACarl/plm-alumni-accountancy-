@@ -154,9 +154,12 @@ export default function DashboardEvents() {
                       </p>
                     </div>
 
-                    <button className="mt-5 rounded-lg bg-[#18392b] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#24513d]">
+                    <Link
+                      to="/events"
+                      className="mt-5 inline-flex rounded-lg bg-[#18392b] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#24513d]"
+                    >
                       View Event
-                    </button>
+                    </Link>
                   </div>
                 </div>
               </article>

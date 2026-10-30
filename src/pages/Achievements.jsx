@@ -3,7 +3,6 @@ import {
   ArrowLeft,
   Award,
   CalendarDays,
-  ChevronRight,
   Trophy,
   GraduationCap,
   BriefcaseBusiness,
@@ -255,13 +254,6 @@ export default function Achievements() {
                             </div>
                           </div>
 
-                          <button
-                            type="button"
-                            className="inline-flex items-center gap-1 text-sm font-semibold text-[#18392b] transition hover:text-[#b28b1e]"
-                          >
-                            View
-                            <ChevronRight size={16} />
-                          </button>
                         </div>
 
                         <p className="mt-4 max-w-3xl text-sm leading-6 text-gray-500">
@@ -289,17 +281,11 @@ export default function Achievements() {
             </h3>
 
             <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-gray-500">
-              Submit your latest academic, professional, leadership, or
-              community achievement for your alumni profile.
+              To submit a new academic, professional, leadership, or community
+              achievement, contact the system administrator for the current
+              submission process.
             </p>
 
-            <button
-              type="button"
-              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#b28b1e] px-6 py-3 text-sm font-bold text-[#18392b] transition hover:-translate-y-0.5"
-            >
-              <Award size={17} />
-              Submit Achievement
-            </button>
           </section>
         </div>
       </main>

@@ -375,12 +375,6 @@ export default function Batches() {
                     {member.role}
                   </p>
 
-                  <button
-                    type="button"
-                    className="mt-5 text-xs font-bold uppercase tracking-[0.1em] text-[#315f45] transition hover:text-[#b28b1e]"
-                  >
-                    View Profile
-                  </button>
                 </article>
               ))}
             </div>

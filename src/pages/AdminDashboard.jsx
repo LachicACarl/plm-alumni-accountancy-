@@ -25,6 +25,8 @@ export default function AdminDashboard() {
   const [adminName, setAdminName] = useState("Admin User");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [logoutError, setLogoutError] = useState("");
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -126,7 +128,20 @@ export default function AdminDashboard() {
   }, []);
 
   async function handleLogout() {
-    await supabase.auth.signOut();
+    if (loggingOut) return;
+
+    setLoggingOut(true);
+    setLogoutError("");
+
+    const { error: logoutError } = await supabase.auth.signOut();
+
+    if (logoutError) {
+      console.error("Unable to sign out administrator:", logoutError);
+      setLogoutError("Unable to sign out. Please try again.");
+      setLoggingOut(false);
+      return;
+    }
+
     window.location.href = "/admin/login";
   }
 
@@ -211,8 +226,9 @@ export default function AdminDashboard() {
             <button
               type="button"
               onClick={handleLogout}
+              disabled={loggingOut}
               title="Sign out"
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-white transition hover:bg-white/15"
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <LogOut size={18} />
             </button>
@@ -273,6 +289,13 @@ export default function AdminDashboard() {
           <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
             <p className="font-bold">Unable to load dashboard data</p>
             <p className="mt-1">{error}</p>
+          </div>
+        )}
+
+        {logoutError && (
+          <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+            <p className="font-bold">Unable to sign out</p>
+            <p className="mt-1">{logoutError}</p>
           </div>
         )}
 
@@ -477,7 +500,8 @@ export default function AdminDashboard() {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#18392b] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#24513d]"
+                disabled={loggingOut}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#18392b] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#24513d] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Sign Out
                 <LogOut size={15} />

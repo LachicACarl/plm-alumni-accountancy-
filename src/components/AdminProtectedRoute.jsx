@@ -9,33 +9,41 @@ export default function AdminProtectedRoute({ children }) {
     let mounted = true;
 
     async function checkAdminAccess() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
 
-      if (!user) {
-        if (mounted) setStatus("unauthenticated");
-        return;
-      }
+        if (userError) throw userError;
 
-      const { data: profile, error } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
+        if (!user) {
+          if (mounted) setStatus("unauthenticated");
+          return;
+        }
 
-      if (
-        error ||
-        !profile ||
-        !["admin", "head_admin"].includes(profile.role)
-      ) {
-        await supabase.auth.signOut();
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
 
+        if (
+          profileError ||
+          !profile ||
+          !["admin", "head_admin"].includes(profile.role)
+        ) {
+          await supabase.auth.signOut();
+
+          if (mounted) setStatus("unauthorized");
+          return;
+        }
+
+        if (mounted) setStatus("authorized");
+      } catch (error) {
+        console.error("Unable to verify administrator access:", error);
         if (mounted) setStatus("unauthorized");
-        return;
       }
-
-      if (mounted) setStatus("authorized");
     }
 
     checkAdminAccess();

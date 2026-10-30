@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CalendarDays, Clock, MapPin, ArrowRight, ChevronLeft, ChevronRight, Mail, Phone } from "lucide-react";
+import { CalendarDays, Clock, MapPin, ArrowRight, Mail, Phone } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getEvents } from "../lib/api";
 import PublicLayout from "../layouts/PublicLayout";
@@ -175,13 +175,6 @@ export default function Events() {
                         {event.description || "Join us for this PLM BSA alumni event."}
                       </p>
 
-                      <button
-                        type="button"
-                        className="mt-5 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-[#315f45] transition hover:text-[#9a7b1d]"
-                      >
-                        View Details
-                        <ArrowRight size={14} />
-                      </button>
                     </div>
                   </article>
                 ))
@@ -189,25 +182,7 @@ export default function Events() {
               </div>
 
               {/* CONTROLS */}
-              <div className="mt-8 flex items-center justify-between border-t border-[#d8d8d0] pt-5">
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    aria-label="Previous events"
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-[#b79a3b] bg-white text-[#315f45] transition hover:bg-[#fff2c9]"
-                  >
-                    <ChevronLeft size={17} />
-                  </button>
-
-                  <button
-                    type="button"
-                    aria-label="Next events"
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-[#b79a3b] bg-white text-[#315f45] transition hover:bg-[#fff2c9]"
-                  >
-                    <ChevronRight size={17} />
-                  </button>
-                </div>
-
+              <div className="mt-8 flex justify-end border-t border-[#d8d8d0] pt-5">
                 <Link
                   to="/events"
                   className="inline-flex items-center gap-2 rounded-lg border border-[#b79a3b] bg-white px-5 py-2.5 text-xs font-bold text-[#315f45] transition hover:bg-[#fff2c9]"

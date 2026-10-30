@@ -10,14 +10,22 @@ export default function ProtectedRoute({ children }) {
     let mounted = true;
 
     async function checkSession() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      try {
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
 
-      if (!mounted) return;
+        if (error) throw error;
+        if (!mounted) return;
 
-      setAuthenticated(Boolean(session));
-      setLoading(false);
+        setAuthenticated(Boolean(session));
+      } catch (error) {
+        console.error("Unable to restore alumni session:", error);
+        if (mounted) setAuthenticated(false);
+      } finally {
+        if (mounted) setLoading(false);
+      }
     }
 
     checkSession();
