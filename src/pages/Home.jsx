@@ -11,22 +11,23 @@ import {
 } from "lucide-react";
 import PublicLayout from "../layouts/PublicLayout";
 import plmCampus from "../assets/plm-campus.jpg";
+import eventImage from "../assets/1.jpg";
 
 const events = [
   {
-    image: "/1.jpg",
+    image: eventImage,
     title: "TESTIMONIAL DINNER",
     description:
       "A new horizon beckons, earned through the relentless dedication of our new CPAs.",
   },
   {
-    image: "/1.jpg",
+    image: eventImage,
     title: "MAY 2026 PASSERS",
     description:
       "PLM achieved a commendable passing rate of 52.94%.",
   },
   {
-    image: "/1.jpg",
+    image: eventImage,
     title: "MAY 2026 PASSERS",
     description:
       "Celebrating the achievements of our newest CPA passers.",
@@ -48,11 +49,11 @@ const batches = [
 ];
 
 const memories = [
-  "/1.jpg",
-  "/1.jpg",
-  "/1.jpg",
-  "/1.jpg",
-  "/1.jpg",
+  eventImage,
+  eventImage,
+  eventImage,
+  eventImage,
+  eventImage,
 ];
 
 export default function Home() {
@@ -265,7 +266,7 @@ export default function Home() {
             <div className="min-h-[230px] bg-black/10">
 
               <img
-                src="/1.jpg"
+                src=eventImage
                 alt="Featured BSA alumnus"
                 className="h-full min-h-[230px] w-full object-cover"
               />
