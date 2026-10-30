@@ -499,6 +499,10 @@ export default function AdminAlumni() {
                   };
 
                   try {
+                    if (payload.password.length < 12 || payload.password.length > 128) {
+                      throw new Error("Temporary password must be between 12 and 128 characters.");
+                    }
+
                     const { data, error } = await supabase.functions.invoke(
                       "create-alumni",
                       { body: payload }
@@ -608,8 +612,10 @@ export default function AdminAlumni() {
                     <input
                       type="password"
                       name="password"
-                      placeholder="Minimum 8 characters"
-                      minLength={8}
+                      placeholder="12–128 characters"
+                      minLength={12}
+                      maxLength={128}
+                      autoComplete="new-password"
                       required
                       className="w-full rounded-xl border border-[#d8d2c2] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#18392b] focus:ring-2 focus:ring-[#18392b]/10"
                     />
