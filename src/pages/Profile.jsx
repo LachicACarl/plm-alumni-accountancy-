@@ -29,9 +29,6 @@ export default function Profile() {
 
   async function loadProfile() {
     try {
-      setLoading(true);
-      setError("");
-
       const {
         data: { user },
       } = await supabase.auth.getUser();
