@@ -1,7 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // Production-safe default keeps the deployed function usable even before a secret is configured.
-// Set FRONTEND_ORIGIN explicitly for local or isolated environments.\nconst allowedOrigin = Deno.env.get("FRONTEND_ORIGIN")?.trim() || "https://plm-alumni-accountancy.onrender.com";
+// Set FRONTEND_ORIGIN explicitly for local or isolated environments.
+const allowedOrigin = Deno.env.get("FRONTEND_ORIGIN")?.trim() || "https://plm-alumni-accountancy.onrender.com";
 
 function corsHeaders(_origin: string | null) {
   return {
