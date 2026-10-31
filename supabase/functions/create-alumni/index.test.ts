@@ -90,9 +90,13 @@ Deno.test("creates invitation with normalized email and profile metadata", async
   if (mock.getInviteCalls() !== 1) throw new Error("Expected exactly one invitation call.");
 
   const payload = mock.getInvitePayload() as { data?: Record<string, string>; redirectTo?: string };
-  if (payload.data?.provision_alumni_profile !== "true") throw new Error("Missing profile trigger metadata.");
-  if (payload.data?.first_name !== "Ada" || payload.data?.student_number !== "PLM-2024-001") {
-    throw new Error("Profile metadata was not normalized.");
+  const queued = mock.getRpcCalls().find((call) => call.name === "queue_alumni_invite_profile");
+  if (!queued) throw new Error("Expected profile data to be queued through the trusted RPC.");
+  if (payload.data?.provisioning_token !== queued.args.p_token) {
+    throw new Error("Invitation token does not match the trusted queue record.");
+  }
+  if (queued.args.p_first_name !== "Ada" || queued.args.p_student_number !== "PLM-2024-001") {
+    throw new Error("Queued profile values were not normalized.");
   }
   if (payload.redirectTo !== "https://plm-alumni-accountancy.onrender.com/reset-password") {
     throw new Error("Unexpected invitation redirect URL.");
