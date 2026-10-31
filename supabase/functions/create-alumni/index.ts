@@ -103,24 +103,38 @@ export function createAlumniHandler(clientFactory: typeof createClient = createC
 
     const appOrigin = allowedOrigin.replace(/\/$/, "");
 
-    // The database trigger creates public.profiles as part of the auth.users
-    // insert transaction. Any profile constraint failure therefore aborts
-    // account creation before Supabase sends the invitation email.
+    // Store profile data in a private table through a service-role-only RPC.
+    // A random one-time ticket in user metadata is only a lookup key; it grants
+    // nothing unless a matching private request was created by this function.
+    const provisioningToken = crypto.randomUUID();
+    const { error: queueError } = await supabaseAdmin.rpc("queue_alumni_invite_profile", {
+      p_token: provisioningToken,
+      p_email: email,
+      p_first_name: firstName,
+      p_middle_name: middleName,
+      p_last_name: lastName,
+      p_student_number: studentNumber,
+      p_graduation_year: graduationYear,
+      p_profession: profession,
+      p_company: company,
+    });
+
+    if (queueError) {
+      throw new Error("Unable to prepare the alumni profile: " + queueError.message);
+    }
+
     const { data: invitedUser, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      data: {
-        provision_alumni_profile: "true",
-        first_name: firstName,
-        middle_name: middleName,
-        last_name: lastName,
-        student_number: studentNumber,
-        graduation_year: graduationYear === null ? "" : String(graduationYear),
-        profession: profession ?? "",
-        company: company ?? "",
-      },
+      data: { provisioning_token: provisioningToken },
       redirectTo: appOrigin + "/reset-password",
     });
 
     if (inviteError || !invitedUser.user) {
+      const { error: cleanupError } = await supabaseAdmin.rpc("cancel_alumni_invite_profile", {
+        p_token: provisioningToken,
+      });
+      if (cleanupError) {
+        console.error("Failed to clean up pending alumni provisioning ticket:", cleanupError.message);
+      }
       console.error("Alumni invitation/account provisioning failed:", inviteError?.message || "No user returned.");
       throw new Error(inviteError?.message || "Unable to create the alumni profile and send the invitation.");
     }
