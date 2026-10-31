@@ -41,6 +41,8 @@ grant execute on function public.list_active_batch_members(integer) to authentic
 -- self-service updates to the columns used by the profile editor; protected
 -- identity, cohort, role, and account-status fields remain administrator-only.
 revoke update on public.profiles from authenticated;
+revoke update (id, student_number, email, graduation_year, role, account_status, created_at, updated_at)
+  on public.profiles from authenticated;
 grant update (first_name, middle_name, last_name, phone, address, profile_image_url, profession, company, bio)
   on public.profiles to authenticated;
 
@@ -63,7 +65,7 @@ begin
     raise insufficient_privilege using message = 'Administrator access required';
   end if;
 
-  if p_account_status not in ('active', 'inactive') then
+  if p_account_status is null or p_account_status not in ('active', 'inactive') then
     raise invalid_parameter_value using message = 'Account status must be active or inactive';
   end if;
 
