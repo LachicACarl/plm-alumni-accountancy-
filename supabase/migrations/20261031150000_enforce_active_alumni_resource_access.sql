@@ -43,6 +43,44 @@ grant execute on function public.list_active_batch_members(integer) to authentic
 revoke update on public.profiles from authenticated;
 grant update (first_name, middle_name, last_name, phone, address, profile_image_url, profession, company, bio)
   on public.profiles to authenticated;
+
+-- Administrator-only status transition. Authenticated users share one SQL
+-- role, so sensitive admin writes must go through this role-checking function
+-- rather than restoring table-wide UPDATE to the browser role.
+create or replace function public.set_alumni_account_status(
+  p_alumni_id uuid,
+  p_account_status text
+)
+returns void
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $function$
+declare
+  affected_rows integer;
+begin
+  if not public.is_account_admin(auth.uid()) then
+    raise insufficient_privilege using message = 'Administrator access required';
+  end if;
+
+  if p_account_status not in ('active', 'inactive') then
+    raise invalid_parameter_value using message = 'Account status must be active or inactive';
+  end if;
+
+  update public.profiles
+  set account_status = p_account_status
+  where id = p_alumni_id
+    and role = 'alumni';
+
+  get diagnostics affected_rows = row_count;
+  if affected_rows <> 1 then
+    raise no_data_found using message = 'Alumni profile not found';
+  end if;
+end;
+$function$;
+
+revoke all on function public.set_alumni_account_status(uuid, text) from public, anon;
+grant execute on function public.set_alumni_account_status(uuid, text) to authenticated;
 drop policy if exists "Admins can update profiles" on public.profiles;
 drop policy if exists "Admins can update alumni profiles" on public.profiles;
 create policy "Admins can update alumni profiles"
