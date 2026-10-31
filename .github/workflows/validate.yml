@@ -174,10 +174,13 @@ jobs:
             first_name text not null default '',
             middle_name text,
             last_name text not null default '',
+            phone text,
+            address text,
             graduation_year integer,
+            profile_image_url text,
             profession text,
             company text,
-            profile_image_url text
+            bio text
           );
           create table public.credentials (
             id uuid primary key,
