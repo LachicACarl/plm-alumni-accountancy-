@@ -427,7 +427,7 @@ export default function AdminDashboard() {
                   </p>
 
                   <p className="mt-1 text-sm font-bold text-[#286044]">
-                    Operational
+                    Check live service status
                   </p>
                 </div>
               </div>
@@ -463,7 +463,7 @@ export default function AdminDashboard() {
                   </p>
 
                   <p className="mt-1 text-sm font-bold text-[#18392b]">
-                    RLS Protected
+                    Verify database policies
                   </p>
                 </div>
               </div>
