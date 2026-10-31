@@ -116,7 +116,7 @@ begin
   end if;
 end $$;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', false);
-do $
+do $$
 begin
   begin
     perform public.set_alumni_account_status(
@@ -127,8 +127,8 @@ begin
   exception when insufficient_privilege then
     null;
   end;
-end $;
-do $
+end $$;
+do $$
 begin
   if (select count(*) from public.profiles) <> 1 then
     raise exception 'Active alumnus must see own profile only through profiles table';
