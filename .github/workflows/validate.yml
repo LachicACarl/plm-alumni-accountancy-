@@ -31,6 +31,28 @@ jobs:
         run: npm ci
       - name: Check Supabase Edge Function
         run: deno check --config supabase/functions/create-alumni/deno.json supabase/functions/create-alumni/index.ts
+      - name: Start ephemeral PostgreSQL for migration tests
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          docker run --name alumni-test-postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=alumni_test -p 5432:5432 -d postgres:16
+          for attempt in {1..30}; do
+            if pg_isready -h 127.0.0.1 -p 5432 -U postgres; then break; fi
+            sleep 2
+          done
+        env:
+          PGPASSWORD: postgres
+      - name: Test Auth profile migration on ephemeral PostgreSQL
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: alumni_test
+        run: |
+          psql -v ON_ERROR_STOP=1 -c "create schema auth;"
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261031120000_create_alumni_profile_on_invite.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/tests/create_alumni_profile_trigger_test.sql
       - name: Run ESLint
         run: npm run lint
       - name: Build production bundle
