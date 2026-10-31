@@ -186,6 +186,27 @@ begin
   exception when insufficient_privilege then
     null;
   end;
+  declare
+    affected_rows integer;
+  begin
+    update public.credentials
+    set status='verified', verified_by=auth.uid(), verified_at=now()
+    where id='10000000-0000-0000-0000-000000000001';
+    get diagnostics affected_rows = row_count;
+    if affected_rows <> 0 then
+      raise exception 'Active alumnus unexpectedly updated a credential record';
+    end if;
+  end;
+  declare
+    affected_rows integer;
+  begin
+    delete from public.credentials
+    where id='10000000-0000-0000-0000-000000000001';
+    get diagnostics affected_rows = row_count;
+    if affected_rows <> 0 then
+      raise exception 'Active alumnus unexpectedly deleted a credential record';
+    end if;
+  end;
   begin
     insert into storage.objects(id,bucket_id,name)
     values ('30000000-0000-0000-0000-000000000004','alumni-credentials',auth.uid()::text||'/active-upload.pdf');
@@ -200,6 +221,16 @@ begin
     get diagnostics affected_rows = row_count;
     if affected_rows <> 0 then
       raise exception 'Active alumnus unexpectedly replaced an existing credential file';
+    end if;
+  end;
+  declare
+    affected_rows integer;
+  begin
+    delete from storage.objects
+    where id='30000000-0000-0000-0000-000000000001';
+    get diagnostics affected_rows = row_count;
+    if affected_rows <> 0 then
+      raise exception 'Active alumnus unexpectedly deleted an existing credential file';
     end if;
   end;
 end $$;
@@ -266,6 +297,17 @@ begin
   end if;
   if not exists (select 1 from public.profiles where id='00000000-0000-0000-0000-000000000002') then
     raise exception 'Administrator must retain full profile directory access';
+  end if;
+  update public.credentials
+  set status='verified', verified_by=auth.uid(), verified_at=now()
+  where id='10000000-0000-0000-0000-000000000003';
+  if not exists (
+    select 1 from public.credentials
+    where id='10000000-0000-0000-0000-000000000003'
+      and status='verified'
+      and verified_by=auth.uid()
+  ) then
+    raise exception 'Administrator must retain credential verification access';
   end if;
   if (select count(*) from public.credentials) <> 3 then
     raise exception 'Administrator must retain credential review access';
