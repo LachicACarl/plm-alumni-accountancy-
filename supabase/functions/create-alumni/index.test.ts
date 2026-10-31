@@ -127,6 +127,30 @@ Deno.test("rejects invalid email before invitation", async () => {
   if (mock.getInviteCalls() !== 0) throw new Error("Invalid email must not trigger an invitation.");
 });
 
+Deno.test("rejects a missing last name before invitation", async () => {
+  const mock = makeHandler();
+  const { last_name: _lastName, ...withoutLastName } = validBody;
+  const response = await mock.handler(request(withoutLastName));
+  if (response.status !== 400) throw new Error("Expected missing last name to return 400.");
+  if (mock.getInviteCalls() !== 0) throw new Error("Missing last name must not trigger an invitation.");
+});
+
+Deno.test("returns 400 for malformed JSON", async () => {
+  const mock = makeHandler();
+  const malformed = new Request("https://project.example.test/functions/v1/create-alumni", {
+    method: "POST",
+    headers: {
+      Origin: "https://plm-alumni-accountancy.onrender.com",
+      Authorization: "Bearer test-admin-token",
+      "Content-Type": "application/json",
+    },
+    body: "{ invalid json",
+  });
+  const response = await mock.handler(malformed);
+  if (response.status !== 400) throw new Error("Expected malformed JSON to return 400.");
+  if (mock.getInviteCalls() !== 0) throw new Error("Malformed JSON must not trigger an invitation.");
+});
+
 Deno.test("rejects a disallowed browser origin", async () => {
   const mock = makeHandler();
   const response = await mock.handler(request(validBody, "https://attacker.example"));
