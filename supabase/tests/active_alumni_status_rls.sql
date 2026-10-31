@@ -49,13 +49,15 @@ alter table storage.objects enable row level security;
 insert into auth.users(id) values
  ('00000000-0000-0000-0000-000000000001'),
  ('00000000-0000-0000-0000-000000000002'),
- ('00000000-0000-0000-0000-000000000003')
+ ('00000000-0000-0000-0000-000000000003'),
+ ('00000000-0000-0000-0000-000000000004')
 on conflict do nothing;
 insert into public.profiles(id, role, account_status, first_name, last_name, graduation_year)
 values
  ('00000000-0000-0000-0000-000000000001', 'alumni', 'active', 'Active', 'One', 2024),
  ('00000000-0000-0000-0000-000000000002', 'alumni', 'inactive', 'Inactive', 'Two', 2024),
- ('00000000-0000-0000-0000-000000000003', 'admin', 'active', 'Admin', 'User', 2020)
+ ('00000000-0000-0000-0000-000000000003', 'admin', 'active', 'Admin', 'User', 2020),
+ ('00000000-0000-0000-0000-000000000004', 'alumni', 'active', 'Active', 'Four', 2024)
 on conflict (id) do update set role=excluded.role,
   account_status=excluded.account_status, first_name=excluded.first_name,
   last_name=excluded.last_name, graduation_year=excluded.graduation_year;
@@ -103,7 +105,7 @@ begin
   if (select count(*) from storage.objects where bucket_id='alumni-credentials') <> 1 then
     raise exception 'Active alumnus must read own credential storage object';
   end if;
-  if (select count(*) from public.list_active_batch_members(2024)) <> 1 then
+  if (select count(*) from public.list_active_batch_members(2024)) <> 2 then
     raise exception 'Batch directory must return active batch members only';
   end if;
   begin
@@ -119,7 +121,13 @@ begin
   exception when others then
     raise exception 'Active alumnus could not upload own credential: %', SQLERRM;
   end;
-end $$;
+  begin
+    insert into storage.objects(id,bucket_id,name)
+    values ('30000000-0000-0000-0000-000000000004','alumni-credentials',auth.uid()::text||'/active-upload.pdf');
+  exception when others then
+    raise exception 'Active alumnus could not upload own credential file: %', SQLERRM;
+  end;
+end $;
 
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', false);
 do $$
@@ -173,10 +181,10 @@ begin
   if not exists (select 1 from public.profiles where id='00000000-0000-0000-0000-000000000002' and account_status='active') then
     raise exception 'Administrator must be able to reactivate an alumnus';
   end if;
-  if (select count(*) from public.credentials) <> 2 then
+  if (select count(*) from public.credentials) <> 3 then
     raise exception 'Administrator must retain credential review access';
   end if;
-  if (select count(*) from storage.objects where bucket_id='alumni-credentials') <> 2 then
+  if (select count(*) from storage.objects where bucket_id='alumni-credentials') <> 3 then
     raise exception 'Administrator must retain access to credential files';
   end if;
 end $$;
