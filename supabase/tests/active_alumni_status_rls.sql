@@ -16,7 +16,7 @@ as $$
   select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
 $$;
 
-create table public.profiles (
+create table if not exists public.profiles (
   id uuid primary key references auth.users(id),
   role text not null default 'alumni',
   account_status text not null default 'active'
