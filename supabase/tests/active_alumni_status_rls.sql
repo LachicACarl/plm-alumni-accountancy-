@@ -197,7 +197,14 @@ begin
 end $$;
 
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000003', false);
-do $$
+do $
+begin
+  if not has_column_privilege('authenticated', 'public.profiles', 'account_status', 'UPDATE') then
+    raise exception 'Authenticated role must retain table-wide profile UPDATE for admins';
+  end if;
+end
+$;
+do $
 begin
   if not exists (select 1 from public.profiles where id=auth.uid() and role='admin') then
     raise exception 'Administrator must retain profile read access';
