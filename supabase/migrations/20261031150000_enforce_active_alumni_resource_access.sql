@@ -39,6 +39,28 @@ create policy "Admins can update alumni profiles"
   using ((select public.is_account_admin()))
   with check ((select public.is_account_admin()));
 
+-- Intersect any pre-existing permissive profiles policies, including legacy
+-- directory policies. Alumni directory access is provided through the safe RPC.
+drop policy if exists "Active alumni profile boundary" on public.profiles;
+create policy "Active alumni profile boundary"
+  on public.profiles as restrictive for all to authenticated
+  using (
+    (select public.is_account_admin())
+    or (
+      id = (select auth.uid())
+      and role = 'alumni'
+      and account_status = 'active'
+    )
+  )
+  with check (
+    (select public.is_account_admin())
+    or (
+      id = (select auth.uid())
+      and role = 'alumni'
+      and account_status = 'active'
+    )
+  );
+
 -- Credentials: preserve self-service for active alumni and allow admins to
 -- review/manage records. The RESTRICTIVE boundary also intersects older,
 -- broader permissive policies that may already exist in deployed projects.
