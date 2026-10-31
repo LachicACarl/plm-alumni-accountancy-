@@ -10,6 +10,25 @@ src/lib/database.sql
 Run:
 src/lib/seed.sql
 
+## 3. Apply Supabase migrations in timestamp order
+
+After creating the base schema and loading the batch seed data, apply every
+migration in `supabase/migrations/` in ascending filename order:
+
+1. `20261030090000_add_alumni_account_status.sql`
+2. `20261031120000_create_alumni_profile_on_invite.sql`
+3. `20261031130000_add_homepage_content_management.sql`
+4. `20261031140000_enforce_active_alumni_status.sql`
+5. `20261031150000_enforce_active_alumni_resource_access.sql`
+
+The admin invitation Edge Function depends on the private provisioning RPC
+created by migration 2. Do not deploy the function until this migration has
+been applied.
+
+Apply and validate migrations in an isolated staging project before using
+them in production. SQL regression tests under `supabase/tests/` are designed
+for disposable PostgreSQL databases and must never be run against production.
+
 ## Tables
 
 - profiles
