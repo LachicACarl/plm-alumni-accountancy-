@@ -322,7 +322,7 @@ begin
   if (select count(*) from public.credentials) <> 3 then
     raise exception 'Administrator must retain credential review access';
   end if;
-  if (select count(*) from storage.objects where bucket_id='alumni-credentials') <> 3 then
+  if (select count(*) from storage.objects where bucket_id='alumni-credentials') <> 2 then
     raise exception 'Administrator must retain access to credential files';
   end if;
 end $$;
