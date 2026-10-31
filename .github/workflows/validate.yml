@@ -6,6 +6,7 @@ on:
       - fix/home-image-404
       - fix/admin-system-improvements
       - feature/admin-managed-public-content
+      - integration/mainline-production-hardening
   pull_request:
     branches:
       - main
