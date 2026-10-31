@@ -30,3 +30,57 @@ jobs:
         run: npm run lint
       - name: Build production bundle
         run: npm run build
+
+  homepage-database:
+    name: Homepage migration and RLS (disposable PostgreSQL)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: homepage_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d homepage_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Prepare minimal Supabase auth/profile test fixtures
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d homepage_test -v ON_ERROR_STOP=1 <<'SQL'
+          create role anon nologin;
+          create role authenticated nologin;
+          create schema auth;
+          create table auth.users (id uuid primary key);
+          create or replace function auth.uid() returns uuid
+          language sql stable
+          as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+          create table public.profiles (
+            id uuid primary key references auth.users(id),
+            role text not null
+          );
+          insert into auth.users (id) values
+            ('00000000-0000-0000-0000-000000000001'),
+            ('00000000-0000-0000-0000-000000000002');
+          insert into public.profiles (id, role) values
+            ('00000000-0000-0000-0000-000000000001', 'admin'),
+            ('00000000-0000-0000-0000-000000000002', 'alumni');
+          grant usage on schema public, auth to anon, authenticated;
+          grant execute on function auth.uid() to anon, authenticated;
+          SQL
+      - name: Apply homepage content migration
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d homepage_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261031130000_add_homepage_content_management.sql
+      - name: Verify public read and admin-only update policies
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d homepage_test -v ON_ERROR_STOP=1 -f supabase/tests/homepage_content_rls.sql
