@@ -79,7 +79,7 @@ $$;
 -- Seed existing profile data for each uniqueness/FK failure scenario.
 insert into public.profiles(id, first_name, last_name, email, student_number)
 values
-  ('00000000-0000-0000-0000-000000000001', 'Seed', 'Student', 'collision@example.test', 'DUP-STUDENT');
+  ('00000000-0000-0000-0000-000000000001', 'Seed', 'Student', 'new-auth-email@example.test', 'DUP-STUDENT');
 
 -- Duplicate student number: auth.users insert and trigger profile insert must roll back together.
 do $$
@@ -98,16 +98,14 @@ begin
 end
 $$;
 
--- Duplicate profile email (distinct from the Auth user's own email uniqueness).
+-- Duplicate profile email: the existing profile email differs from its owner's Auth email.
 do $$
 begin
   begin
     insert into auth.users(id, email, raw_user_meta_data)
     values ('00000000-0000-0000-0000-000000000004', 'new-auth-email@example.test',
       '{"provision_alumni_profile":"true","first_name":"Duplicate","last_name":"Email","student_number":"UNIQUE-EMAIL-TEST"}'::jsonb);
-    -- Force the same profile email through metadata by updating the Auth email first
-    -- is not possible after insert, so the trigger correctly derives email from NEW.email.
-    raise exception 'fixture error: expected the profile email collision to be detected';
+    raise exception 'expected duplicate profile email to fail';
   exception when unique_violation then
     null;
   end;
