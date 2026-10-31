@@ -127,7 +127,7 @@ begin
   exception when others then
     raise exception 'Active alumnus could not upload own credential file: %', SQLERRM;
   end;
-end $;
+end $$;
 
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', false);
 do $$
