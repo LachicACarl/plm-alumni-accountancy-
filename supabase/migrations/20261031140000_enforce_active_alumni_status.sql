@@ -8,9 +8,9 @@ stable
 security definer
 set search_path = pg_catalog, public
 as $$
-  select exists (
+  select p_user_id = auth.uid() and exists (
     select 1 from public.profiles
-    where id = p_user_id
+    where id = auth.uid()
       and role = 'alumni'
       and account_status = 'active'
   );
@@ -23,12 +23,16 @@ stable
 security definer
 set search_path = pg_catalog, public
 as $$
-  select exists (
+  select p_user_id = auth.uid() and exists (
     select 1 from public.profiles
-    where id = p_user_id
+    where id = auth.uid()
       and role in ('admin', 'head_admin')
   );
 $$;
+
+-- The repository base schema does not enable this table by default.
+-- Policies are inert until RLS is explicitly enabled.
+alter table public.profiles enable row level security;
 
 revoke all on function public.is_active_alumni(uuid) from public, anon;
 revoke all on function public.is_account_admin(uuid) from public, anon;
