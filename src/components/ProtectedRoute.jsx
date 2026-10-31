@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabase";
 
 export default function ProtectedRoute({ children }) {
   const [loading, setLoading] = useState(true);
-  const [authenticated, setAuthenticated] = useState(false);\n  const [verificationKey, setVerificationKey] = useState(0);
+  const [authenticated, setAuthenticated] = useState(false);
 
   async function verifyAlumniSession(session) {
     if (!session?.user?.id) {
