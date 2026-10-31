@@ -43,6 +43,25 @@ begin
 end
 $$;
 
+-- A forged or random ticket cannot provision a profile and aborts the Auth insert.
+do $
+begin
+  begin
+    insert into auth.users(id, email, raw_user_meta_data)
+    values ('00000000-0000-0000-0000-000000000007', 'forged-ticket@example.test',
+      '{"provisioning_token":"99999999-9999-9999-9999-999999999999"}'::jsonb);
+    raise exception 'expected an unknown provisioning ticket to fail';
+  exception when raise_exception then
+    if sqlerrm not like 'No trusted alumni provisioning request%' then
+      raise;
+    end if;
+  end;
+  if exists (select 1 from auth.users where id = '00000000-0000-0000-0000-000000000007') then
+    raise exception 'forged ticket left an Auth user';
+  end if;
+end
+$;
+
 -- A normal signup with no provisioning ticket remains unaffected.
 insert into auth.users(id, email, raw_user_meta_data)
 values ('00000000-0000-0000-0000-000000000006', 'normal@example.test', '{}'::jsonb);
