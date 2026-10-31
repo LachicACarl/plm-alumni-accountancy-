@@ -76,9 +76,15 @@ export default function AdminHomepage() {
     });
     setError(""); setMessage("");
   }
-  function updateArray(name, index, key, value) {
-    const next = clone(content[name]); next[index] = key === null ? value : { ...next[index], [key]: value };
-    setAt([name], next);
+  function updateArray(path, index, key, value) {
+    const currentArray = path.split(".").reduce((target, part) => target?.[part], content);
+    if (!Array.isArray(currentArray)) {
+      setError(`Unable to update ${path}: the content section is unavailable.`);
+      return;
+    }
+    const next = clone(currentArray);
+    next[index] = key === null ? value : { ...next[index], [key]: value };
+    setAt(path.split("."), next);
   }
   function validate() {
     const required = ["hero","events","spotlight","footer"];
