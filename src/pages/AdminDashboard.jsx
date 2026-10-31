@@ -11,6 +11,7 @@ import {
   Database,
   ExternalLink,
   LogOut,
+  PanelsTopLeft,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
@@ -146,6 +147,14 @@ export default function AdminDashboard() {
   }
 
   const managementCards = [
+    {
+      title: "Homepage Content",
+      description: "Edit the public homepage hero, featured content, spotlight, images, and footer.",
+      count: "Edit",
+      label: "Website Content",
+      icon: PanelsTopLeft,
+      path: "/admin/homepage",
+    },
     {
       title: "Alumni Management",
       description: "Search, review, and manage registered BSA alumni records.",
