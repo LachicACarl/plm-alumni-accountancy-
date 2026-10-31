@@ -24,14 +24,25 @@ as $$
     and p.role = 'alumni'
     and p.account_status = 'active'
     and p.graduation_year = p_graduation_year
+    and p.graduation_year = (
+      select own_profile.graduation_year
+      from public.profiles own_profile
+      where own_profile.id = (select auth.uid())
+        and own_profile.role = 'alumni'
+        and own_profile.account_status = 'active'
+    )
   order by p.last_name asc, p.first_name asc;
 $$;
 
 revoke all on function public.list_active_batch_members(integer) from public, anon;
 grant execute on function public.list_active_batch_members(integer) to authenticated;
 
--- Admins must be able to change alumni account status. Alumni may edit only
--- their own active profile; the existing self-update policy remains in place.
+-- Admins must be able to change alumni account status. Restrict alumni
+-- self-service updates to the columns used by the profile editor; protected
+-- identity, cohort, role, and account-status fields remain administrator-only.
+revoke update on public.profiles from authenticated;
+grant update (first_name, middle_name, last_name, phone, address, profile_image_url, profession, company, bio)
+  on public.profiles to authenticated;
 drop policy if exists "Admins can update profiles" on public.profiles;
 drop policy if exists "Admins can update alumni profiles" on public.profiles;
 create policy "Admins can update alumni profiles"
@@ -77,7 +88,13 @@ create policy "Active alumni can read own credentials"
 
 create policy "Active alumni can upload own credentials"
   on public.credentials for insert to authenticated
-  with check (profile_id = (select auth.uid()) and (select public.is_active_alumni()));
+  with check (
+    profile_id = (select auth.uid())
+    and (select public.is_active_alumni())
+    and status = 'pending'
+    and verified_by is null
+    and verified_at is null
+  );
 
 create policy "Admins can read credentials"
   on public.credentials for select to authenticated
@@ -134,13 +151,19 @@ drop policy if exists "Active alumni manage own credential files" on storage.obj
 drop policy if exists "Admins manage alumni credential files" on storage.objects;
 drop policy if exists "Active alumni credential storage boundary" on storage.objects;
 
-create policy "Active alumni manage own credential files"
-  on storage.objects for all to authenticated
+-- Alumni may read submitted files and upload new unique paths, but may not
+-- overwrite or delete files after submission/verification. Only admins can
+-- update or delete existing credential objects.
+create policy "Active alumni read own credential files"
+  on storage.objects for select to authenticated
   using (
     bucket_id = 'alumni-credentials'
     and (storage.foldername(name))[1] = (select auth.uid())::text
     and (select public.is_active_alumni())
-  )
+  );
+
+create policy "Active alumni upload own credential files"
+  on storage.objects for insert to authenticated
   with check (
     bucket_id = 'alumni-credentials'
     and (storage.foldername(name))[1] = (select auth.uid())::text
