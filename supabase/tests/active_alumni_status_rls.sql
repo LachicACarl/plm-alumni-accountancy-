@@ -27,7 +27,9 @@ create table if not exists public.profiles (
   profile_image_url text,
   profession text,
   company text,
-  bio text
+  bio text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 create table if not exists public.credentials (
   id uuid primary key,
