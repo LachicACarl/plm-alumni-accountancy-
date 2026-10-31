@@ -139,7 +139,7 @@ create policy "Active alumni can upload own credentials"
       select 1
       from storage.objects uploaded
       where uploaded.bucket_id = 'alumni-credentials'
-        and uploaded.name = public.credentials.file_url
+        and uploaded.name = file_url
         and (storage.foldername(uploaded.name))[1] = (select auth.uid())::text
     )
   );
