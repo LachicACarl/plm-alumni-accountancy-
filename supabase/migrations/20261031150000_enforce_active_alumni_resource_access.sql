@@ -134,6 +134,14 @@ create policy "Active alumni can upload own credentials"
     and status = 'pending'
     and verified_by is null
     and verified_at is null
+    and (storage.foldername(file_url))[1] = (select auth.uid())::text
+    and exists (
+      select 1
+      from storage.objects uploaded
+      where uploaded.bucket_id = 'alumni-credentials'
+        and uploaded.name = public.credentials.file_url
+        and (storage.foldername(uploaded.name))[1] = (select auth.uid())::text
+    )
   );
 
 create policy "Admins can read credentials"
@@ -170,6 +178,14 @@ create policy "Pending credential submission boundary"
       and status = 'pending'
       and verified_by is null
       and verified_at is null
+      and (storage.foldername(file_url))[1] = (select auth.uid())::text
+      and exists (
+        select 1
+        from storage.objects uploaded
+        where uploaded.bucket_id = 'alumni-credentials'
+          and uploaded.name = public.credentials.file_url
+          and (storage.foldername(uploaded.name))[1] = (select auth.uid())::text
+      )
     )
   );
 
