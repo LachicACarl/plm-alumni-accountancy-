@@ -5,6 +5,7 @@ on:
     branches:
       - fix/home-image-404
       - fix/admin-system-improvements
+      - feature/admin-managed-public-content
   pull_request:
     branches:
       - main
