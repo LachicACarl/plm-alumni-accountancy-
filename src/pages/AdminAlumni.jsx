@@ -33,7 +33,7 @@ export default function AdminAlumni() {
       const { data, error: alumniError } = await supabase
         .from("profiles")
         .select(
-          "id, student_number, first_name, middle_name, last_name, email, graduation_year, profession, company, role, created_at"
+          "id, student_number, first_name, middle_name, last_name, email, graduation_year, profession, company, role, account_status, created_at"
         )
         .eq("role", "alumni")
         .order("last_name", { ascending: true });
@@ -57,7 +57,7 @@ export default function AdminAlumni() {
         profession: alumni.profession || "Not specified",
         company: alumni.company || "Not specified",
         email: alumni.email || "",
-        status: "Active",
+        status: alumni.account_status === "inactive" ? "Inactive" : "Active",
       }));
 
       const years = [
@@ -488,7 +488,6 @@ export default function AdminAlumni() {
 
                   const payload = {
                     email: String(formData.get("email") || "").trim(),
-                    password: String(formData.get("password") || ""),
                     first_name: String(formData.get("first_name") || "").trim(),
                     middle_name: "",
                     last_name: String(formData.get("last_name") || "").trim(),
@@ -525,7 +524,7 @@ export default function AdminAlumni() {
                       );
                     }
 
-                    alert("Alumni account created successfully.");
+                    alert("Alumni invitation sent successfully. The alumnus can use the email link to confirm their account and set a password.");
                     form.reset();
                     setShowAddModal(false);
                     window.location.reload();
@@ -601,19 +600,6 @@ export default function AdminAlumni() {
                     />
                   </div>
 
-                  <div className="sm:col-span-2">
-                    <label className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
-                      Temporary Password
-                    </label>
-                    <input
-                      type="password"
-                      name="password"
-                      placeholder="Minimum 8 characters"
-                      minLength={8}
-                      required
-                      className="w-full rounded-xl border border-[#d8d2c2] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#18392b] focus:ring-2 focus:ring-[#18392b]/10"
-                    />
-                  </div>
 
                   <div>
                     <label className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
@@ -646,9 +632,7 @@ export default function AdminAlumni() {
                   </p>
 
                   <p className="mt-1 text-xs leading-5 text-gray-500">
-                    The alumni login account will be connected through
-                    Supabase Authentication in the next step. This form
-                    currently prepares the profile information only.
+                    An invitation email will be sent after the alumni profile is saved. They can use the secure email link to set their initial password.
                   </p>
                 </div>
 
