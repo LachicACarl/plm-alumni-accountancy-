@@ -129,3 +129,62 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d homepage_test -v ON_ERROR_STOP=1 -f supabase/tests/homepage_content_rls.sql
+
+  alumni-status-rls:
+    name: Active alumni status RLS (disposable PostgreSQL)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: alumni_status_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d alumni_status_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Prepare minimal profiles and Auth fixtures
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d alumni_status_test -v ON_ERROR_STOP=1 <<'SQL'
+          create role anon nologin;
+          create role authenticated nologin;
+          create schema auth;
+          create table auth.users (id uuid primary key);
+          create or replace function auth.uid() returns uuid
+          language sql stable
+          as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+          create table public.profiles (
+            id uuid primary key references auth.users(id),
+            role text not null default 'alumni'
+          );
+          insert into auth.users (id) values
+            ('00000000-0000-0000-0000-000000000001'),
+            ('00000000-0000-0000-0000-000000000002'),
+            ('00000000-0000-0000-0000-000000000003');
+          insert into public.profiles (id, role) values
+            ('00000000-0000-0000-0000-000000000001', 'alumni'),
+            ('00000000-0000-0000-0000-000000000002', 'alumni'),
+            ('00000000-0000-0000-0000-000000000003', 'admin');
+          grant usage on schema public, auth to anon, authenticated;
+          grant execute on function auth.uid() to authenticated;
+          grant select, update on public.profiles to authenticated;
+          SQL
+      - name: Apply account status and active alumni policies
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d alumni_status_test -v ON_ERROR_STOP=1 -c "alter table public.profiles add column account_status text not null default 'active' check (account_status in ('active','inactive'));"
+          psql -h localhost -U postgres -d alumni_status_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261031140000_enforce_active_alumni_status.sql
+      - name: Verify active and inactive alumni access boundaries
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d alumni_status_test -v ON_ERROR_STOP=1 -f supabase/tests/active_alumni_status_rls.sql
