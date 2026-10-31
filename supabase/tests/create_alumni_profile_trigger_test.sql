@@ -39,7 +39,7 @@ end
 $$;
 
 -- A forged or random ticket cannot provision a profile and aborts the Auth insert.
-do $
+do $$
 begin
   begin
     insert into auth.users(id, email, raw_user_meta_data)
@@ -55,7 +55,7 @@ begin
     raise exception 'forged ticket left an Auth user';
   end if;
 end
-$;
+$$;
 
 -- A normal signup with no provisioning ticket remains unaffected.
 insert into auth.users(id, email, raw_user_meta_data)
