@@ -33,7 +33,7 @@ export default function AdminAlumni() {
       const { data, error: alumniError } = await supabase
         .from("profiles")
         .select(
-          "id, student_number, first_name, middle_name, last_name, email, graduation_year, profession, company, role, created_at"
+          "id, student_number, first_name, middle_name, last_name, email, graduation_year, profession, company, role, account_status, created_at"
         )
         .eq("role", "alumni")
         .order("last_name", { ascending: true });
