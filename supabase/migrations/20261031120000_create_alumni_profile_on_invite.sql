@@ -106,6 +106,9 @@ begin
 end;
 $$;
 
+-- Make the trigger declaration safe to retry in environments where the
+-- migration was applied manually before the migration ledger was updated.
+drop trigger if exists on_auth_user_created_alumni_profile on auth.users;
 create trigger on_auth_user_created_alumni_profile
 after insert on auth.users
 for each row
