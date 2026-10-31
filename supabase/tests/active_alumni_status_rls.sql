@@ -9,7 +9,7 @@ returns uuid language sql stable
 as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 create or replace function storage.foldername(name text)
 returns text[] language sql immutable
-as $$ select string_to_array(name, '/') [1:1] $$;
+as $ select (string_to_array(name, '/'))[1:1] $;
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id),
