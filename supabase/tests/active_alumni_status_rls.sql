@@ -16,13 +16,18 @@ create table if not exists public.profiles (
   role text not null default 'alumni',
   account_status text not null default 'active'
     check (account_status in ('active', 'inactive')),
+  student_number text unique,
   first_name text not null default '',
   middle_name text,
   last_name text not null default '',
+  email text unique,
+  phone text,
+  address text,
   graduation_year integer,
+  profile_image_url text,
   profession text,
   company text,
-  profile_image_url text
+  bio text
 );
 create table if not exists public.credentials (
   id uuid primary key,
@@ -111,7 +116,19 @@ begin
   end if;
 end $$;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', false);
-do $$
+do $
+begin
+  begin
+    perform public.set_alumni_account_status(
+      '00000000-0000-0000-0000-000000000002',
+      'active'
+    );
+    raise exception 'Active alumnus unexpectedly invoked the administrator status RPC';
+  exception when insufficient_privilege then
+    null;
+  end;
+end $;
+do $
 begin
   if (select count(*) from public.profiles) <> 1 then
     raise exception 'Active alumnus must see own profile only through profiles table';
@@ -217,22 +234,24 @@ begin
 end $$;
 
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000003', false);
-do $
-begin
-  if not has_column_privilege('authenticated', 'public.profiles', 'account_status', 'UPDATE') then
-    raise exception 'Authenticated role must retain table-wide profile UPDATE for admins';
-  end if;
-end
-$;
-do $
+do $$
 begin
   if not exists (select 1 from public.profiles where id=auth.uid() and role='admin') then
     raise exception 'Administrator must retain profile read access';
   end if;
-  update public.profiles set account_status='active'
-    where id='00000000-0000-0000-0000-000000000002';
-  if not exists (select 1 from public.profiles where id='00000000-0000-0000-0000-000000000002' and account_status='active') then
-    raise exception 'Administrator must be able to reactivate an alumnus';
+  if has_column_privilege('authenticated', 'public.profiles', 'account_status', 'UPDATE') then
+    raise exception 'Authenticated users must not have direct account_status UPDATE';
+  end if;
+  perform public.set_alumni_account_status(
+    '00000000-0000-0000-0000-000000000002',
+    'active'
+  );
+  if not exists (
+    select 1 from public.profiles
+    where id='00000000-0000-0000-0000-000000000002'
+      and account_status='active'
+  ) then
+    raise exception 'Administrator RPC must reactivate an alumnus';
   end if;
   if not exists (select 1 from public.profiles where id='00000000-0000-0000-0000-000000000002') then
     raise exception 'Administrator must retain full profile directory access';
