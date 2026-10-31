@@ -37,10 +37,13 @@ begin
   if (select count(*) from public.profiles) <> 1 then
     raise exception 'Active alumnus must see only their own profile';
   end if;
-  update public.profiles set account_status='inactive' where id=auth.uid();
-  if not exists (select 1 from public.profiles where id=auth.uid() and account_status='active') then
-    raise exception 'Active alumnus must not deactivate their own profile';
-  end if;
+  begin
+    update public.profiles set account_status='inactive' where id=auth.uid();
+    raise exception 'Active alumnus unexpectedly changed their own account status';
+  exception
+    when insufficient_privilege then
+      null; -- Expected: WITH CHECK rejects a self-deactivation.
+  end;
 end $$;
 
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', false);
