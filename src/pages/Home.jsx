@@ -18,10 +18,10 @@ const defaults = {
 const safeImage = (url, fallback) => typeof url === "string" && /^https:\/\//i.test(url) ? url : fallback;
 const safeText = (value, fallback = "") => typeof value === "string" ? value : fallback;
 function FallbackImage({ src, fallback, alt, className, ...props }) {
-  const [currentSrc, setCurrentSrc] = useState(src || fallback);
-  useEffect(() => setCurrentSrc(src || fallback), [src, fallback]);
+  const [failedSource, setFailedSource] = useState("");
+  const currentSrc = src === failedSource ? fallback : src || fallback;
   return <img {...props} src={currentSrc} alt={alt} className={className} onError={() => {
-    if (currentSrc !== fallback) setCurrentSrc(fallback);
+    if (currentSrc !== fallback) setFailedSource(src);
   }} />;
 }
 
