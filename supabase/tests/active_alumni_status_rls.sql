@@ -90,6 +90,23 @@ create policy "test legacy storage access" on storage.objects for all to authent
 \i supabase/migrations/20261031150000_enforce_active_alumni_resource_access.sql
 
 set role authenticated;
+do $
+begin
+  if has_table_privilege('authenticated', 'public.profiles', 'UPDATE') then
+    raise exception 'Alumni must not retain table-wide UPDATE on profiles';
+  end if;
+  if not has_column_privilege('authenticated', 'public.profiles', 'first_name', 'UPDATE')
+     or not has_column_privilege('authenticated', 'public.profiles', 'phone', 'UPDATE')
+     or not has_column_privilege('authenticated', 'public.profiles', 'bio', 'UPDATE') then
+    raise exception 'Alumni must retain intended editable profile column privileges';
+  end if;
+  if has_column_privilege('authenticated', 'public.profiles', 'student_number', 'UPDATE')
+     or has_column_privilege('authenticated', 'public.profiles', 'graduation_year', 'UPDATE')
+     or has_column_privilege('authenticated', 'public.profiles', 'role', 'UPDATE')
+     or has_column_privilege('authenticated', 'public.profiles', 'account_status', 'UPDATE') then
+    raise exception 'Alumni must not update protected profile columns';
+  end if;
+end $;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', false);
 do $$
 begin
