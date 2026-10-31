@@ -65,10 +65,11 @@ begin
   end if;
 
   if exists (
-    select 1 from public.get_public_alumni()
-    where email is not null
+    select 1
+    from public.get_public_alumni() as alumni
+    where to_jsonb(alumni) ? 'email'
   ) then
-    raise exception 'Public directory must not expose email addresses';
+    raise exception 'Public directory must not return an email field';
   end if;
 
   select count(*) into visible_year from public.batches;
