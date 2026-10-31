@@ -10,11 +10,6 @@ begin
 end
 $$;
 
-create table auth.users (
-  id uuid primary key,
-  email text unique,
-  raw_user_meta_data jsonb not null default '{}'::jsonb
-);
 create table public.batches (year integer primary key);
 create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
