@@ -11,6 +11,7 @@ import {
   Database,
   ExternalLink,
   LogOut,
+  PanelsTopLeft,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
@@ -147,9 +148,16 @@ export default function AdminDashboard() {
 
   const managementCards = [
     {
+      title: "Homepage Content",
+      description: "Edit the public homepage hero, featured content, spotlight, images, and footer.",
+      count: "Edit",
+      label: "Website Content",
+      icon: PanelsTopLeft,
+      path: "/admin/homepage",
+    },
+    {
       title: "Alumni Management",
-      description:
-        "Search, review, and manage registered BSA alumni records.",
+      description: "Search, review, and manage registered BSA alumni records.",
       count: stats.alumni,
       label: "Alumni Records",
       icon: Users,
@@ -157,12 +165,27 @@ export default function AdminDashboard() {
     },
     {
       title: "Credential Verification",
-      description:
-        "Review and verify credentials submitted by alumni.",
+      description: "Review and verify credentials submitted by alumni.",
       count: stats.pendingCredentials,
       label: "Pending Reviews",
       icon: FileCheck2,
       path: "/admin/credentials",
+    },
+    {
+      title: "Event Management",
+      description: "Create, update, and organize alumni events.",
+      count: stats.activeEvents,
+      label: "Upcoming Events",
+      icon: CalendarDays,
+      path: "/admin/events",
+    },
+    {
+      title: "Batch Management",
+      description: "Maintain graduation batches and alumni year groups.",
+      count: stats.batches,
+      label: "Batches",
+      icon: GraduationCap,
+      path: "/admin/batches",
     },
   ];
 
@@ -427,7 +450,7 @@ export default function AdminDashboard() {
                   </p>
 
                   <p className="mt-1 text-sm font-bold text-[#286044]">
-                    Operational
+                    Check live service status
                   </p>
                 </div>
               </div>
@@ -463,7 +486,7 @@ export default function AdminDashboard() {
                   </p>
 
                   <p className="mt-1 text-sm font-bold text-[#18392b]">
-                    RLS Protected
+                    Verify database policies
                   </p>
                 </div>
               </div>

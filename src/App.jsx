@@ -17,6 +17,7 @@ import AdminAlumni from "./pages/AdminAlumni";
 import AdminCredentials from "./pages/AdminCredentials";
 import AdminEvents from "./pages/AdminEvents";
 import AdminBatches from "./pages/AdminBatches";
+import AdminHomepage from "./pages/AdminHomepage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
 
@@ -92,6 +93,15 @@ export default function App() {
           element={
             <AdminProtectedRoute>
               <AdminDashboard />
+            </AdminProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/homepage"
+          element={
+            <AdminProtectedRoute>
+              <AdminHomepage />
             </AdminProtectedRoute>
           }
         />

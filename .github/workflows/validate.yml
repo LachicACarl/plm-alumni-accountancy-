@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - fix/home-image-404
+      - fix/admin-system-improvements
   pull_request:
     branches:
       - main
@@ -29,3 +30,199 @@ jobs:
         run: npm run lint
       - name: Build production bundle
         run: npm run build
+
+  alumni-invitation:
+    name: Secure invitation and Auth profile tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Check Supabase Edge Function
+        run: deno check --config supabase/functions/create-alumni/deno.json supabase/functions/create-alumni/index.ts
+      - name: Test Supabase Edge Function with mocked client
+        env:
+          FRONTEND_ORIGIN: https://plm-alumni-accountancy.onrender.com
+          SUPABASE_URL: https://project.example.test
+          SUPABASE_SERVICE_ROLE_KEY: test-only-placeholder
+        run: deno test --allow-env --config supabase/functions/create-alumni/deno.json supabase/functions/create-alumni/index.test.ts
+      - name: Start ephemeral PostgreSQL for invitation migration tests
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          docker run --name alumni-test-postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=alumni_test -p 5432:5432 -d postgres:16
+          for attempt in {1..30}; do
+            if pg_isready -h 127.0.0.1 -p 5432 -U postgres; then break; fi
+            sleep 2
+          done
+        env:
+          PGPASSWORD: postgres
+      - name: Test Auth profile migration on ephemeral PostgreSQL
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: alumni_test
+        run: |
+          psql -v ON_ERROR_STOP=1 -c "create schema auth;"
+          psql -v ON_ERROR_STOP=1 -c "create table auth.users (id uuid primary key, email text unique, raw_user_meta_data jsonb not null default '{}'::jsonb);"
+          psql -v ON_ERROR_STOP=1 -c "create role anon nologin;"
+          psql -v ON_ERROR_STOP=1 -c "create role authenticated nologin;"
+          psql -v ON_ERROR_STOP=1 -c "create role service_role nologin;"
+          psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261031120000_create_alumni_profile_on_invite.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/tests/create_alumni_profile_trigger_test.sql
+
+  homepage-database:
+    name: Homepage migration and RLS (disposable PostgreSQL)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: homepage_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d homepage_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Prepare minimal Supabase auth/profile test fixtures
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d homepage_test -v ON_ERROR_STOP=1 <<'SQL'
+          create role anon nologin;
+          create role authenticated nologin;
+          create schema auth;
+          create table auth.users (id uuid primary key);
+          create or replace function auth.uid() returns uuid
+          language sql stable
+          as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+          create table public.profiles (
+            id uuid primary key references auth.users(id),
+            role text not null
+          );
+          insert into auth.users (id) values
+            ('00000000-0000-0000-0000-000000000001'),
+            ('00000000-0000-0000-0000-000000000002');
+          insert into public.profiles (id, role) values
+            ('00000000-0000-0000-0000-000000000001', 'admin'),
+            ('00000000-0000-0000-0000-000000000002', 'alumni');
+          grant usage on schema public, auth to anon, authenticated;
+          grant execute on function auth.uid() to anon, authenticated;
+          SQL
+      - name: Apply homepage content migration
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d homepage_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261031130000_add_homepage_content_management.sql
+      - name: Verify public read and admin-only update policies
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d homepage_test -v ON_ERROR_STOP=1 -f supabase/tests/homepage_content_rls.sql
+
+  alumni-status-rls:
+    name: Active alumni status RLS (disposable PostgreSQL)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: alumni_status_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d alumni_status_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Prepare minimal profiles and Auth fixtures
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d alumni_status_test -v ON_ERROR_STOP=1 <<'SQL'
+          create role anon nologin;
+          create role authenticated nologin;
+          create schema auth;
+          create schema storage;
+          create table auth.users (id uuid primary key);
+          create or replace function auth.uid() returns uuid
+          language sql stable
+          as $fn$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $fn$;
+          create or replace function storage.foldername(name text) returns text[]
+          language sql immutable
+          as $fn$ select (string_to_array(name, '/'))[1:1] $fn$;
+          create table public.profiles (
+            id uuid primary key references auth.users(id),
+            student_number text unique,
+            email text unique,
+            role text not null default 'alumni',
+            account_status text not null default 'active'
+              check (account_status in ('active', 'inactive')),
+            first_name text not null default '',
+            middle_name text,
+            last_name text not null default '',
+            phone text,
+            address text,
+            graduation_year integer,
+            profile_image_url text,
+            profession text,
+            company text,
+            bio text,
+            created_at timestamptz not null default now(),
+            updated_at timestamptz not null default now()
+          );
+          create table public.credentials (
+            id uuid primary key,
+            profile_id uuid not null references public.profiles(id),
+            credential_type text not null,
+            file_url text not null,
+            status text not null default 'pending',
+            remarks text,
+            verified_by uuid,
+            verified_at timestamptz
+          );
+          create table public.achievements (
+            id uuid primary key,
+            profile_id uuid not null references public.profiles(id),
+            title text not null
+          );
+          create table storage.objects (
+            id uuid primary key,
+            bucket_id text not null,
+            name text not null
+          );
+          insert into auth.users (id) values
+            ('00000000-0000-0000-0000-000000000001'),
+            ('00000000-0000-0000-0000-000000000002'),
+            ('00000000-0000-0000-0000-000000000003'),
+            ('00000000-0000-0000-0000-000000000004');
+          insert into public.profiles (id, role, account_status, first_name, last_name, graduation_year) values
+            ('00000000-0000-0000-0000-000000000001', 'alumni', 'active', 'Active', 'One', 2024),
+            ('00000000-0000-0000-0000-000000000002', 'alumni', 'inactive', 'Inactive', 'Two', 2024),
+            ('00000000-0000-0000-0000-000000000003', 'admin', 'active', 'Admin', 'User', 2020),
+            ('00000000-0000-0000-0000-000000000004', 'alumni', 'active', 'Active', 'Four', 2024);
+          grant usage on schema public, auth, storage to anon, authenticated;
+          grant execute on function auth.uid() to authenticated;
+          grant execute on function storage.foldername(text) to authenticated;
+          grant select, update on public.profiles to authenticated;
+          grant select, insert, update, delete on public.credentials, public.achievements, storage.objects to authenticated;
+          SQL
+      - name: Verify active and inactive alumni access boundaries
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d alumni_status_test -v ON_ERROR_STOP=1 -f supabase/tests/active_alumni_status_rls.sql
