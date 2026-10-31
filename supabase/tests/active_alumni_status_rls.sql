@@ -186,12 +186,15 @@ begin
   exception when others then
     raise exception 'Active alumnus could not upload own credential file: %', SQLERRM;
   end;
+  declare
+    affected_rows integer;
   begin
     update storage.objects set name=auth.uid()::text||'/tampered.pdf'
     where id='30000000-0000-0000-0000-000000000001';
-    raise exception 'Active alumnus unexpectedly replaced an existing credential file';
-  exception when insufficient_privilege then
-    null;
+    get diagnostics affected_rows = row_count;
+    if affected_rows <> 0 then
+      raise exception 'Active alumnus unexpectedly replaced an existing credential file';
+    end if;
   end;
 end $$;
 
@@ -227,10 +230,12 @@ begin
   exception when insufficient_privilege then
     null;
   end;
-  update public.profiles set role='admin' where id=auth.uid();
-  if exists (select 1 from public.profiles where id=auth.uid()) then
-    raise exception 'Inactive alumnus must not update their profile';
-  end if;
+  begin
+    update public.profiles set role='admin' where id=auth.uid();
+    raise exception 'Inactive alumnus unexpectedly changed their role';
+  exception when insufficient_privilege then
+    null;
+  end;
 end $$;
 
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000003', false);
