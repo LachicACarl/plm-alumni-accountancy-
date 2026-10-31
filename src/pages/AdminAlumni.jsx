@@ -102,8 +102,8 @@ export default function AdminAlumni() {
     (alumni) => alumni.status === "Active"
   ).length;
 
-  const unknownCount = alumniData.filter(
-    (alumni) => alumni.status === "Unknown"
+  const inactiveCount = alumniData.filter(
+    (alumni) => alumni.status === "Inactive"
   ).length;
 
   const getInitials = (name) =>
@@ -232,11 +232,11 @@ export default function AdminAlumni() {
 
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">
-                  Status Not Configured
+                  Inactive Alumni
                 </p>
 
                 <p className="mt-1 font-serif text-2xl font-bold">
-                  {loading ? "—" : unknownCount}
+                  {loading ? "—" : inactiveCount}
                 </p>
               </div>
             </div>
@@ -296,7 +296,6 @@ export default function AdminAlumni() {
               <option value="All">All Status</option>
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
-              <option value="Unknown">Not configured</option>
             </select>
           </div>
         </section>
