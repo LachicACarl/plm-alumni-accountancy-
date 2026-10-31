@@ -100,7 +100,7 @@ export default function Login() {
     setRecoveryMessage("");
     const email = recoveryEmail.trim();
 
-    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setRecoveryError("Enter a valid registered email address.");
       return;
     }
