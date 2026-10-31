@@ -90,6 +90,9 @@ create policy "Admins can update alumni profiles"
   using ((select public.is_account_admin()))
   with check ((select public.is_account_admin()));
 
+-- Ensure the policy set is active even when a deployment started from the base SQL schema.
+alter table public.profiles enable row level security;
+
 -- Intersect any pre-existing permissive profiles policies, including legacy
 -- directory policies. Alumni directory access is provided through the safe RPC.
 drop policy if exists "Active alumni profile boundary" on public.profiles;
