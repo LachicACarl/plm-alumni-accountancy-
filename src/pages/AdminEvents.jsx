@@ -573,12 +573,10 @@ export default function AdminEvents() {
                             alt={event.title}
                             onError={(imageEvent) => {
                               const image = imageEvent.currentTarget;
-                              if (image.dataset.fallbackApplied === "true") return;
-                              image.dataset.fallbackApplied = "true";
+                              const originalUrl = event.image_url?.trim();
+                              if (!originalUrl || image.dataset.fallbackFor === originalUrl) return;
+                              image.dataset.fallbackFor = originalUrl;
                               image.src = fallbackEventImage;
-                            }}
-                            onLoad={(imageEvent) => {
-                              delete imageEvent.currentTarget.dataset.fallbackApplied;
                             }}
                             className="h-full w-full object-cover"
                           />
