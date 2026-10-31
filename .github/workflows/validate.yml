@@ -183,6 +183,7 @@ jobs:
           PGPASSWORD: postgres
         run: |
           psql -h localhost -U postgres -d alumni_status_test -v ON_ERROR_STOP=1 -c "alter table public.profiles add column account_status text not null default 'active' check (account_status in ('active','inactive'));"
+          psql -h localhost -U postgres -d alumni_status_test -v ON_ERROR_STOP=1 -c "alter table public.credentials add column if not exists remarks text; alter table public.credentials add column if not exists verified_by uuid; alter table public.credentials add column if not exists verified_at timestamptz;"
           psql -h localhost -U postgres -d alumni_status_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261031140000_enforce_active_alumni_status.sql
       - name: Verify active and inactive alumni access boundaries
         env:
