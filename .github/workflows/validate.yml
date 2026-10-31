@@ -168,6 +168,8 @@ jobs:
           as $fn$ select (string_to_array(name, '/'))[1:1] $fn$;
           create table public.profiles (
             id uuid primary key references auth.users(id),
+            student_number text unique,
+            email text unique,
             role text not null default 'alumni',
             account_status text not null default 'active'
               check (account_status in ('active', 'inactive')),
