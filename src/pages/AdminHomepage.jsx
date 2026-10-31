@@ -13,8 +13,6 @@ const defaultContent = {
   footer: { address: "General Luna corner Muralla Streets, Intramuros, Manila, 1002 Metro Manila, Philippines", email: "BSAAlumniSystem.2026@gmail.com", phone: "(02) 1234-5678 / 09123456789", copyright: "© BSA ALUMNI SYSTEM | Pamantasan ng Lungsod ng Maynila. All Rights Reserved" },
 };
 
-const inputClass = "mt-1 w-full rounded-xl border border-[#d8ddd6] bg-white px-3 py-2.5 text-sm text-[#18392b] outline-none focus:border-[#b79a3b]";
-const labelClass = "block text-xs font-bold uppercase tracking-wide text-[#68736b]";
 
 export default function AdminHomepage() {
   const [content, setContent] = useState(defaultContent);
