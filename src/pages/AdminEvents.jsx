@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import fallbackEventImage from "../assets/1.jpg";
 import {
   ArrowLeft,
   CalendarDays,
@@ -566,10 +567,17 @@ export default function AdminEvents() {
                   >
                     <div className="grid md:grid-cols-[190px_minmax(0,1fr)]">
                       <div className="h-44 bg-[#e8ece7] md:h-full">
-                        {event.image_url ? (
+                        {(typeof event.image_url === "string" && /^https?:\/\//i.test(event.image_url.trim())) ? (
                           <img
-                            src={event.image_url}
+                            src={event.image_url.trim()}
                             alt={event.title}
+                            onError={(imageEvent) => {
+                              const image = imageEvent.currentTarget;
+                              const originalUrl = event.image_url?.trim();
+                              if (!originalUrl || image.dataset.fallbackFor === originalUrl) return;
+                              image.dataset.fallbackFor = originalUrl;
+                              image.src = fallbackEventImage;
+                            }}
                             className="h-full w-full object-cover"
                           />
                         ) : (

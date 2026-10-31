@@ -8,7 +8,7 @@ import {
   UserRound,
 } from "lucide-react";
 import plmCampus from "../assets/plm-campus.jpg";
-import plmLogo from "../../assets/plm-accountancy-logo.svg";
+const plmLogo = "/assets/plm-accountancy-logo.svg";
 import { supabase } from "../lib/supabase";
 
 export default function Login() {
@@ -31,14 +31,21 @@ export default function Login() {
     setError("");
 
     if (!username.trim() || !password.trim()) {
-      setError("Please enter your username/email and password.");
+      setError("Please enter your registered email address and password.");
+      return;
+    }
+
+    const email = username.trim();
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Enter the email address registered to your alumni account. Username-only sign-in is not supported.");
       return;
     }
 
     try {
       const { data, error: loginError } =
         await supabase.auth.signInWithPassword({
-          email: username.trim(),
+          email,
           password,
         });
 
@@ -319,7 +326,7 @@ export default function Login() {
                     ) : (
                     <form onSubmit={handleSubmit} className="space-y-4">
 
-                      {/* Username */}
+                      {/* Registered email address */}
                       <div className="relative">
                         <UserRound
                           size={18}
@@ -328,13 +335,13 @@ export default function Login() {
                         />
 
                         <input
-                          id="username"
-                          name="username"
-                          autoComplete="username"
-                          type="text"
+                          id="email"
+                          name="email"
+                          autoComplete="email"
+                          type="email"
                           value={username}
                           onChange={(event) => setUsername(event.target.value)}
-                          placeholder="Username or email"
+                          placeholder="Registered email address"
                           className="h-14 w-full rounded-xl border border-[#a8afa9] bg-white/65 pl-12 pr-4 text-sm text-[#263129] outline-none transition-all duration-200 placeholder:text-[#727b74] hover:border-[#7da384] focus:border-[#4f9364] focus:bg-white/90 focus:ring-4 focus:ring-[#4f9364]/10"
                         />
                       </div>
