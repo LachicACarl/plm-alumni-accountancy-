@@ -577,6 +577,9 @@ export default function AdminEvents() {
                               image.dataset.fallbackApplied = "true";
                               image.src = fallbackEventImage;
                             }}
+                            onLoad={(imageEvent) => {
+                              delete imageEvent.currentTarget.dataset.fallbackApplied;
+                            }}
                             className="h-full w-full object-cover"
                           />
                         ) : (
