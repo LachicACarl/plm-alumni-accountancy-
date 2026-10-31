@@ -133,8 +133,10 @@ export default function Events() {
                         }
                         alt={event.title}
                         onError={(imageEvent) => {
-                          imageEvent.currentTarget.onerror = null;
-                          imageEvent.currentTarget.src = eventImage;
+                          const image = imageEvent.currentTarget;
+                          if (image.dataset.fallbackApplied === "true") return;
+                          image.dataset.fallbackApplied = "true";
+                          image.src = eventImage;
                         }}
                         className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                       />
