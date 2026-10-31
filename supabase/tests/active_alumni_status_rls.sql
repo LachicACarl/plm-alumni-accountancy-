@@ -109,7 +109,7 @@ begin
      or has_column_privilege('authenticated', 'public.profiles', 'account_status', 'UPDATE') then
     raise exception 'Alumni must not update protected profile columns';
   end if;
-end $;
+end $$;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', false);
 do $$
 begin
