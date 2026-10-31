@@ -48,7 +48,7 @@ create table if not exists storage.objects (
   bucket_id text not null,
   name text not null
 );
-alter table public.profiles enable row level security;
+alter table public.profiles disable row level security;
 alter table public.credentials enable row level security;
 alter table public.achievements enable row level security;
 alter table storage.objects enable row level security;
@@ -77,7 +77,8 @@ insert into public.achievements(id, profile_id, title) values
  ('20000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000002','Inactive achievement');
 insert into storage.objects(id,bucket_id,name) values
  ('30000000-0000-0000-0000-000000000001','alumni-credentials','00000000-0000-0000-0000-000000000001/active.pdf'),
- ('30000000-0000-0000-0000-000000000002','alumni-credentials','00000000-0000-0000-0000-000000000002/inactive.pdf');
+ ('30000000-0000-0000-0000-000000000002','alumni-credentials','00000000-0000-0000-0000-000000000002/inactive.pdf'),
+ ('30000000-0000-0000-0000-000000000005','alumni-credentials','00000000-0000-0000-0000-000000000004/other-users.pdf');
 
 grant usage on schema public, auth, storage to authenticated;
 grant execute on function auth.uid() to authenticated;
@@ -95,6 +96,13 @@ create policy "test legacy storage access" on storage.objects for all to authent
 
 \i supabase/migrations/20261031140000_enforce_active_alumni_status.sql
 \i supabase/migrations/20261031150000_enforce_active_alumni_resource_access.sql
+
+do $
+begin
+  if not (select relrowsecurity from pg_class where oid = 'public.profiles'::regclass) then
+    raise exception 'The account-status migration must enable RLS on public.profiles';
+  end if;
+end $;
 
 set role authenticated;
 do $$
@@ -122,7 +130,19 @@ begin
   end if;
 end $$;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', false);
-do $$
+do $
+begin
+  if not public.is_active_alumni(auth.uid()) then
+    raise exception 'Active-alumni helper must identify the authenticated active alumnus';
+  end if;
+  if public.is_active_alumni('00000000-0000-0000-0000-000000000004') then
+    raise exception 'Active-alumni helper must not disclose another user account status';
+  end if;
+  if public.is_account_admin('00000000-0000-0000-0000-000000000003') then
+    raise exception 'Admin helper must not disclose another user role';
+  end if;
+end $;
+do $
 begin
   begin
     perform public.set_alumni_account_status(
@@ -169,6 +189,13 @@ begin
   begin
     update public.profiles set student_number='CHANGED-BY-ALUMNI' where id=auth.uid();
     raise exception 'Active alumnus unexpectedly changed their student number';
+  exception when insufficient_privilege then
+    null;
+  end;
+  begin
+    insert into public.credentials(id,profile_id,credential_type,file_url)
+    values ('10000000-0000-0000-0000-000000000006',auth.uid(),'Academic','00000000-0000-0000-0000-000000000004/other-users.pdf');
+    raise exception 'Active alumnus unexpectedly linked another users file';
   exception when insufficient_privilege then
     null;
   end;
@@ -290,6 +317,12 @@ do $$
 begin
   if not exists (select 1 from public.profiles where id=auth.uid() and role='admin') then
     raise exception 'Administrator must retain profile read access';
+  end if;
+  if not public.is_account_admin(auth.uid()) then
+    raise exception 'Admin helper must identify the authenticated administrator';
+  end if;
+  if public.is_account_admin('00000000-0000-0000-0000-000000000001') then
+    raise exception 'Admin helper must not disclose another user role';
   end if;
   if has_column_privilege('authenticated', 'public.profiles', 'account_status', 'UPDATE') then
     raise exception 'Authenticated users must not have direct account_status UPDATE';
