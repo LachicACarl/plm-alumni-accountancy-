@@ -156,6 +156,34 @@ create policy "Active alumni credential boundary"
     or (profile_id = (select auth.uid()) and (select public.is_active_alumni()))
   );
 
+-- Keep legacy permissive policies from granting alumni extra write operations.
+-- New submissions must be pending and unverified; only administrators may
+-- update existing credential rows or delete credential records.
+drop policy if exists "Pending credential submission boundary" on public.credentials;
+create policy "Pending credential submission boundary"
+  on public.credentials as restrictive for insert to authenticated
+  with check (
+    (select public.is_account_admin())
+    or (
+      profile_id = (select auth.uid())
+      and (select public.is_active_alumni())
+      and status = 'pending'
+      and verified_by is null
+      and verified_at is null
+    )
+  );
+
+drop policy if exists "Admin only credential updates" on public.credentials;
+create policy "Admin only credential updates"
+  on public.credentials as restrictive for update to authenticated
+  using ((select public.is_account_admin()))
+  with check ((select public.is_account_admin()));
+
+drop policy if exists "Admin only credential deletes" on public.credentials;
+create policy "Admin only credential deletes"
+  on public.credentials as restrictive for delete to authenticated
+  using ((select public.is_account_admin()));
+
 -- Achievements are currently rendered from static frontend data, but the
 -- table exists in the schema. Protect owner reads and admin review now so
 -- future DB-backed use cannot bypass account_status.
@@ -238,4 +266,26 @@ create policy "Active alumni credential storage boundary"
       (storage.foldername(name))[1] = (select auth.uid())::text
       and (select public.is_active_alumni())
     )
+  );
+
+-- A legacy permissive Storage policy must not allow alumni to replace or
+-- delete a previously submitted credential object after upload/verification.
+drop policy if exists "Admin only credential object updates" on storage.objects;
+create policy "Admin only credential object updates"
+  on storage.objects as restrictive for update to authenticated
+  using (
+    bucket_id <> 'alumni-credentials'
+    or (select public.is_account_admin())
+  )
+  with check (
+    bucket_id <> 'alumni-credentials'
+    or (select public.is_account_admin())
+  );
+
+drop policy if exists "Admin only credential object deletes" on storage.objects;
+create policy "Admin only credential object deletes"
+  on storage.objects as restrictive for delete to authenticated
+  using (
+    bucket_id <> 'alumni-credentials'
+    or (select public.is_account_admin())
   );
