@@ -51,6 +51,8 @@ jobs:
           PGDATABASE: alumni_test
         run: |
           psql -v ON_ERROR_STOP=1 -c "create schema auth;"
+          psql -v ON_ERROR_STOP=1 -c "create role anon nologin;"
+          psql -v ON_ERROR_STOP=1 -c "create role authenticated nologin;"
           psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261031120000_create_alumni_profile_on_invite.sql
           psql -v ON_ERROR_STOP=1 -f supabase/tests/create_alumni_profile_trigger_test.sql
       - name: Run ESLint
