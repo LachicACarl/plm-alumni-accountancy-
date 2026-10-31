@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
     });
 
     const authHeader = req.headers.get("Authorization");
-    const tokenMatch = authHeader?.match(/^Bearer\\s+(.+)$/i);
+    const tokenMatch = authHeader?.match(/^Bearer\s+(.+)$/i);
     if (!tokenMatch) {
       return jsonResponse({ error: "Missing or invalid authorization." }, 401, origin);
     }
@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
     }
 
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
-    if (email.length > 254 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+    if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return jsonResponse({ error: "Enter a valid email address." }, 400, origin);
     }
 
@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const appOrigin = allowedOrigin.replace(/\\/$/, "");
+    const appOrigin = allowedOrigin.replace(/\/$/, "");
 
     // The database trigger creates public.profiles as part of the auth.users
     // insert transaction. Any profile constraint failure therefore aborts
