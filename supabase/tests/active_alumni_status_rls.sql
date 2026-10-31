@@ -233,6 +233,16 @@ begin
       raise exception 'Active alumnus unexpectedly deleted an existing credential file';
     end if;
   end;
+  declare
+    affected_rows integer;
+  begin
+    delete from storage.objects
+    where id='30000000-0000-0000-0000-000000000004';
+    get diagnostics affected_rows = row_count;
+    if affected_rows <> 1 then
+      raise exception 'Active alumnus must be able to clean up an unlinked failed upload';
+    end if;
+  end;
 end $$;
 
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', false);
