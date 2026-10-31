@@ -10,6 +10,7 @@ import {
 import { Link } from "react-router-dom";
 import PublicLayout from "../layouts/PublicLayout";
 import { supabase } from "../lib/supabase";
+import { fetchAllPublicAlumni } from "../lib/publicAlumni";
 import plmCampus from "../assets/plm-campus.jpg";
 
 const imageUrl = (value) =>
@@ -35,7 +36,7 @@ export default function Batches() {
       setError("");
       const [batchResult, alumniResult] = await Promise.all([
         supabase.from("batches").select("id, year, description, highlights, image_url").order("year", { ascending: false }),
-        supabase.rpc("get_public_alumni"),
+        fetchAllPublicAlumni(),
       ]);
 
       if (!active) return;
