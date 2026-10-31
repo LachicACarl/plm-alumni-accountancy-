@@ -1,6 +1,5 @@
 -- Disposable PostgreSQL regression test for active/inactive alumni access.
--- Run after 20261030090000_add_alumni_account_status.sql and
--- 20261031140000_enforce_active_alumni_status.sql.
+-- Run after applying the account status and active alumni policies.
 
 \set ON_ERROR_STOP on
 
@@ -40,7 +39,6 @@ grant usage on schema public, auth to authenticated;
 grant execute on function auth.uid() to authenticated;
 grant select, update on public.profiles to authenticated;
 
--- Impersonate the active alumnus. Own row is visible and editable.
 set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', false);
 do $$
@@ -48,24 +46,31 @@ begin
   if (select count(*) from public.profiles) <> 1 then
     raise exception 'Active alumnus must see exactly their own row';
   end if;
-  update public.profiles set account_status = 'inactive'
-  where id = auth.uid();
+  update public.profiles set account_status = 'inactive' where id = auth.uid();
   if not exists (select 1 from public.profiles where id = auth.uid() and account_status = 'active') then
     raise exception 'Alumnus must not be able to deactivate themselves';
   end if;
 end;
 $$;
 
--- Impersonate the inactive alumnus. Their row must be invisible and immutable.
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', false);
 do $$
 begin
   if exists (select 1 from public.profiles where id = auth.uid()) then
-    raise exception 'Inactive alumnus must not read their own profile through the self-service policy';
+    raise exception 'Inactive alumnus must not read their own profile';
   end if;
   update public.profiles set role = 'admin' where id = auth.uid();
   if exists (select 1 from public.profiles where id = auth.uid()) then
     raise exception 'Inactive alumnus must not update their profile';
+  end if;
+end;
+$$;
+
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000003', false);
+do $$
+begin
+  if not exists (select 1 from public.profiles where id = auth.uid() and role = 'admin') then
+    raise exception 'Administrator must retain profile read access';
   end if;
 end;
 $$;
