@@ -139,10 +139,7 @@ export default function Events() {
                           image.src = eventImage;
                         }}
                         onLoad={(imageEvent) => {
-                          const image = imageEvent.currentTarget;
-                          if (image.src.endsWith(eventImage.split("/").pop())) {
-                            delete image.dataset.fallbackApplied;
-                          }
+                          delete imageEvent.currentTarget.dataset.fallbackApplied;
                         }}
                         className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                       />
