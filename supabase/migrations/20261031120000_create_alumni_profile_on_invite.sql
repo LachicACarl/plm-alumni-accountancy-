@@ -51,3 +51,9 @@ create trigger on_auth_user_created_alumni_profile
 after insert on auth.users
 for each row
 execute function public.handle_alumni_invite_profile();
+
+-- Trigger functions are not callable as ordinary RPC functions. Keep their
+-- execution surface restricted while allowing the trigger itself to run.
+revoke all on function public.handle_alumni_invite_profile() from public;
+revoke all on function public.handle_alumni_invite_profile() from anon;
+revoke all on function public.handle_alumni_invite_profile() from authenticated;
