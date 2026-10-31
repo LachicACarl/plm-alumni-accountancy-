@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -58,14 +58,9 @@ export default function Batch() {
         }
 
         const { data: batchMembers, error: membersError } =
-          await supabase
-            .from("profiles")
-            .select(
-              "id, first_name, middle_name, last_name, graduation_year, profession, company, profile_image_url"
-            )
-            .eq("role", "alumni")
-            .eq("graduation_year", graduationYear)
-            .order("last_name", { ascending: true });
+          await supabase.rpc("list_active_batch_members", {
+            p_graduation_year: graduationYear,
+          });
 
         if (membersError) throw membersError;
 
