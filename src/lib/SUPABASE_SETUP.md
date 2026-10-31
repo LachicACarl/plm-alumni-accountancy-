@@ -29,6 +29,77 @@ Apply and validate migrations in an isolated staging project before using
 them in production. SQL regression tests under `supabase/tests/` are designed
 for disposable PostgreSQL databases and must never be run against production.
 
+## Administrator-created alumni invitations
+
+The admin invitation workflow depends on the trusted one-time provisioning
+migration listed above as migration 2. Apply the migrations in order in an
+isolated staging Supabase project before deploying the updated frontend or
+Edge Function.
+
+### Edge Function configuration
+
+The function reads `FRONTEND_ORIGIN` as a server-side secret to restrict
+cross-origin requests and construct the invitation callback URL. Set it to the
+exact deployed frontend origin for the environment being tested:
+
+```bash
+supabase secrets set FRONTEND_ORIGIN=https://your-staging-frontend.example
+```
+
+For local development, use the exact local origin, such as
+`http://localhost:5173`. Do not set this as a `VITE_*` frontend variable.
+
+`supabase/config.toml` intentionally sets:
+
+```toml
+[functions.create-alumni]
+verify_jwt = false
+```
+
+The function performs its own authorization: it requires a Bearer token,
+validates that token with Supabase Auth, and checks the caller's profile role
+for `admin` or `head_admin`. Keep these in-function checks in place; do not
+remove them or rely on the config setting as the authorization boundary.
+Supabase supplies the function's server-side `SUPABASE_URL` and
+`SUPABASE_SERVICE_ROLE_KEY` environment variables. Never expose the
+service-role key in browser code or frontend environment variables.
+
+After the migration and environment secret are configured in the intended
+staging project, deploy the function explicitly:
+
+```bash
+supabase functions deploy create-alumni --no-verify-jwt
+```
+
+### Auth invitation callback and verification
+
+In **Supabase Dashboard → Authentication → URL Configuration**, add the exact
+invitation callback URL to the allowed Redirect URLs list:
+
+```text
+https://your-staging-frontend.example/reset-password
+http://localhost:5173/reset-password
+```
+
+Replace the staging placeholder with the exact staging domain. For the
+production release, use the deployed production frontend URL only after the
+database migration, Edge Function secret, and function deployment have been
+reviewed and approved.
+
+Before production, test the complete workflow in staging: administrator
+authorization, invitation email delivery, the one-time provisioning ticket,
+Auth callback, initial password setup, profile creation, and subsequent
+alumni sign-in. Confirm the provisioning ticket is consumed once and that
+failed invitations clean up their pending ticket.
+
+**Production safety:** do not run `supabase db push`, apply these migrations,
+change Auth redirect/email settings, set secrets, or deploy the Edge Function
+to the connected production project during testing. The connected project
+must be treated as production until a reviewed release is explicitly
+authorized. Disposable PostgreSQL CI tests do not prove that existing
+production Auth triggers, policies, or Storage configuration match the
+repository fixtures.
+
 ## Tables
 
 - profiles
