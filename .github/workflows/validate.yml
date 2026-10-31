@@ -158,33 +158,64 @@ jobs:
           create role anon nologin;
           create role authenticated nologin;
           create schema auth;
+          create schema storage;
           create table auth.users (id uuid primary key);
           create or replace function auth.uid() returns uuid
           language sql stable
-          as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+          as $ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $;
+          create or replace function storage.foldername(name text) returns text[]
+          language sql immutable
+          as $ select (string_to_array(name, '/'))[1:1] $;
           create table public.profiles (
             id uuid primary key references auth.users(id),
-            role text not null default 'alumni'
+            role text not null default 'alumni',
+            account_status text not null default 'active'
+              check (account_status in ('active', 'inactive')),
+            first_name text not null default '',
+            middle_name text,
+            last_name text not null default '',
+            graduation_year integer,
+            profession text,
+            company text,
+            profile_image_url text
+          );
+          create table public.credentials (
+            id uuid primary key,
+            profile_id uuid not null references public.profiles(id),
+            credential_type text not null,
+            file_url text not null,
+            status text not null default 'pending',
+            remarks text,
+            verified_by uuid,
+            verified_at timestamptz
+          );
+          create table public.achievements (
+            id uuid primary key,
+            profile_id uuid not null references public.profiles(id),
+            title text not null
+          );
+          create table storage.objects (
+            id uuid primary key,
+            bucket_id text not null,
+            name text not null
           );
           insert into auth.users (id) values
             ('00000000-0000-0000-0000-000000000001'),
             ('00000000-0000-0000-0000-000000000002'),
-            ('00000000-0000-0000-0000-000000000003');
-          insert into public.profiles (id, role) values
-            ('00000000-0000-0000-0000-000000000001', 'alumni'),
-            ('00000000-0000-0000-0000-000000000002', 'alumni'),
-            ('00000000-0000-0000-0000-000000000003', 'admin');
-          grant usage on schema public, auth to anon, authenticated;
+            ('00000000-0000-0000-0000-000000000003'),
+            ('00000000-0000-0000-0000-000000000004');
+          insert into public.profiles (id, role, account_status, first_name, last_name, graduation_year) values
+            ('00000000-0000-0000-0000-000000000001', 'alumni', 'active', 'Active', 'One', 2024),
+            ('00000000-0000-0000-0000-000000000002', 'alumni', 'inactive', 'Inactive', 'Two', 2024),
+            ('00000000-0000-0000-0000-000000000003', 'admin', 'active', 'Admin', 'User', 2020),
+            ('00000000-0000-0000-0000-000000000004', 'alumni', 'active', 'Active', 'Four', 2024);
+          grant usage on schema public, auth, storage to anon, authenticated;
           grant execute on function auth.uid() to authenticated;
+          grant execute on function storage.foldername(text) to authenticated;
+          grant select, update on public.profiles to authenticated;
+          grant select, insert, update, delete on public.credentials, public.achievements, storage.objects to authenticated;
           grant select, update on public.profiles to authenticated;
           SQL
-      - name: Apply account status and active alumni policies
-        env:
-          PGPASSWORD: postgres
-        run: |
-          psql -h localhost -U postgres -d alumni_status_test -v ON_ERROR_STOP=1 -c "alter table public.profiles add column account_status text not null default 'active' check (account_status in ('active','inactive'));"
-          psql -h localhost -U postgres -d alumni_status_test -v ON_ERROR_STOP=1 -c "alter table public.credentials add column if not exists remarks text; alter table public.credentials add column if not exists verified_by uuid; alter table public.credentials add column if not exists verified_at timestamptz;"
-          psql -h localhost -U postgres -d alumni_status_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261031140000_enforce_active_alumni_status.sql
       - name: Verify active and inactive alumni access boundaries
         env:
           PGPASSWORD: postgres
