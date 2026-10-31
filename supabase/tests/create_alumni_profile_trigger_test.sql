@@ -1,11 +1,12 @@
--- Zero-cost PostgreSQL integration tests for the Auth -> profiles trigger.
--- Run against an ephemeral local PostgreSQL instance only. Never point this at production.
+-- Zero-cost PostgreSQL integration tests for trusted Auth -> profiles provisioning.
+-- This file is run only against an ephemeral PostgreSQL container in GitHub Actions.
 
 create schema if not exists auth;
 do $$
 begin
   if not exists (select 1 from pg_roles where rolname = 'anon') then create role anon nologin; end if;
   if not exists (select 1 from pg_roles where rolname = 'authenticated') then create role authenticated nologin; end if;
+  if not exists (select 1 from pg_roles where rolname = 'service_role') then create role service_role nologin; end if;
 end
 $$;
 
@@ -14,11 +15,7 @@ create table auth.users (
   email text unique,
   raw_user_meta_data jsonb not null default '{}'::jsonb
 );
-
-create table public.batches (
-  year integer primary key
-);
-
+create table public.batches (year integer primary key);
 create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   student_number text unique,
@@ -31,30 +28,40 @@ create table public.profiles (
   company text,
   role text not null default 'alumni' check (role in ('alumni', 'admin', 'head_admin'))
 );
-
 insert into public.batches(year) values (2024), (2025);
 
--- Migration file is applied by the workflow before this test script.
-
--- A normal Auth signup must not be affected by the alumni provisioning trigger.
+-- A caller-controlled metadata flag without a matching private ticket must not
+-- create a profile or be accepted as trusted provisioning.
 insert into auth.users(id, email, raw_user_meta_data)
-values ('00000000-0000-0000-0000-000000000001', 'ordinary@example.test', '{}'::jsonb);
+values ('00000000-0000-0000-0000-000000000001', 'ordinary@example.test',
+  '{"provision_alumni_profile":"true","first_name":"Spoof","last_name":"Attempt"}'::jsonb);
 do $$
 begin
   if exists (select 1 from public.profiles where id = '00000000-0000-0000-0000-000000000001') then
-    raise exception 'non-invite Auth user unexpectedly received an alumni profile';
+    raise exception 'untrusted metadata unexpectedly created a profile';
   end if;
 end
 $$;
 
--- A valid invite creates exactly one profile, trims fields, normalizes email,
--- and never accepts a caller-supplied privileged role.
+-- A normal signup with no provisioning ticket remains unaffected.
 insert into auth.users(id, email, raw_user_meta_data)
-values (
-  '00000000-0000-0000-0000-000000000002',
-  'VALID@EXAMPLE.TEST',
-  '{"provision_alumni_profile":"true","first_name":"  Ada ","middle_name":"  M  ","last_name":" Lovelace ","student_number":"  PLM-2024-001 ","graduation_year":"2024","profession":"Engineer","company":"Analytical Engines","role":"admin"}'::jsonb
+values ('00000000-0000-0000-0000-000000000006', 'normal@example.test', '{}'::jsonb);
+do $$
+begin
+  if exists (select 1 from public.profiles where id = '00000000-0000-0000-0000-000000000006') then
+    raise exception 'normal Auth signup unexpectedly received an alumni profile';
+  end if;
+end
+$$;
+
+-- Valid ticket creates exactly one alumni profile and is consumed.
+select public.queue_alumni_invite_profile(
+  '10000000-0000-0000-0000-000000000002', 'valid@example.test',
+  'Ada', 'M', 'Lovelace', 'PLM-2024-001', 2024, 'Engineer', 'Analytical Engines'
 );
+insert into auth.users(id, email, raw_user_meta_data)
+values ('00000000-0000-0000-0000-000000000002', 'VALID@EXAMPLE.TEST',
+  '{"provisioning_token":"10000000-0000-0000-0000-000000000002"}'::jsonb);
 do $$
 begin
   if (select count(*) from public.profiles where id = '00000000-0000-0000-0000-000000000002') <> 1 then
@@ -63,73 +70,87 @@ begin
   if not exists (
     select 1 from public.profiles
     where id = '00000000-0000-0000-0000-000000000002'
-      and first_name = 'Ada'
-      and middle_name = 'M'
-      and last_name = 'Lovelace'
-      and email = 'valid@example.test'
-      and student_number = 'PLM-2024-001'
-      and graduation_year = 2024
-      and role = 'alumni'
+      and first_name = 'Ada' and middle_name = 'M' and last_name = 'Lovelace'
+      and email = 'valid@example.test' and student_number = 'PLM-2024-001'
+      and graduation_year = 2024 and role = 'alumni'
   ) then
     raise exception 'valid invite profile values or forced alumni role are incorrect';
+  end if;
+  if exists (select 1 from private.alumni_invite_provisioning where token = '10000000-0000-0000-0000-000000000002') then
+    raise exception 'successful invite did not consume its one-time ticket';
   end if;
 end
 $$;
 
--- Seed existing profile data for each uniqueness/FK failure scenario.
+-- Seed profile values that cause the following invite transactions to fail.
 insert into public.profiles(id, first_name, last_name, email, student_number)
-values
-  ('00000000-0000-0000-0000-000000000001', 'Seed', 'Student', 'new-auth-email@example.test', 'DUP-STUDENT');
+values ('00000000-0000-0000-0000-000000000001', 'Seed', 'Student',
+  'duplicate-profile-email@example.test', 'DUP-STUDENT');
 
--- Duplicate student number: auth.users insert and trigger profile insert must roll back together.
+-- Duplicate student number aborts auth.users insert and leaves no orphan user.
+select public.queue_alumni_invite_profile(
+  '10000000-0000-0000-0000-000000000003', 'duplicate-student@example.test',
+  'Duplicate', null, 'Student', 'DUP-STUDENT', null, null, null
+);
 do $$
 begin
   begin
     insert into auth.users(id, email, raw_user_meta_data)
     values ('00000000-0000-0000-0000-000000000003', 'duplicate-student@example.test',
-      '{"provision_alumni_profile":"true","first_name":"Duplicate","last_name":"Student","student_number":"DUP-STUDENT"}'::jsonb);
+      '{"provisioning_token":"10000000-0000-0000-0000-000000000003"}'::jsonb);
     raise exception 'expected duplicate student number to fail';
-  exception when unique_violation then
-    null;
+  exception when unique_violation then null;
   end;
   if exists (select 1 from auth.users where id = '00000000-0000-0000-0000-000000000003') then
     raise exception 'duplicate student number left an orphan Auth user';
   end if;
+  if not exists (select 1 from private.alumni_invite_provisioning where token = '10000000-0000-0000-0000-000000000003') then
+    raise exception 'failed trigger transaction should preserve ticket until caller cleanup';
+  end if;
 end
 $$;
+select public.cancel_alumni_invite_profile('10000000-0000-0000-0000-000000000003');
 
--- Duplicate profile email: the existing profile email differs from its owner's Auth email.
+-- Duplicate profile email also aborts the Auth insert.
+select public.queue_alumni_invite_profile(
+  '10000000-0000-0000-0000-000000000004', 'duplicate-profile-email@example.test',
+  'Duplicate', null, 'Email', 'UNIQUE-EMAIL-TEST', null, null, null
+);
 do $$
 begin
   begin
     insert into auth.users(id, email, raw_user_meta_data)
-    values ('00000000-0000-0000-0000-000000000004', 'new-auth-email@example.test',
-      '{"provision_alumni_profile":"true","first_name":"Duplicate","last_name":"Email","student_number":"UNIQUE-EMAIL-TEST"}'::jsonb);
+    values ('00000000-0000-0000-0000-000000000004', 'duplicate-profile-email@example.test',
+      '{"provisioning_token":"10000000-0000-0000-0000-000000000004"}'::jsonb);
     raise exception 'expected duplicate profile email to fail';
-  exception when unique_violation then
-    null;
+  exception when unique_violation then null;
   end;
   if exists (select 1 from auth.users where id = '00000000-0000-0000-0000-000000000004') then
     raise exception 'duplicate profile email left an orphan Auth user';
   end if;
 end
 $$;
+select public.cancel_alumni_invite_profile('10000000-0000-0000-0000-000000000004');
 
--- Invalid graduation year must fail the profiles FK and roll back Auth user creation.
+-- Unknown graduation batch aborts the Auth insert.
+select public.queue_alumni_invite_profile(
+  '10000000-0000-0000-0000-000000000005', 'invalid-batch@example.test',
+  'Invalid', null, 'Batch', 'UNIQUE-BATCH-TEST', 2099, null, null
+);
 do $$
 begin
   begin
     insert into auth.users(id, email, raw_user_meta_data)
     values ('00000000-0000-0000-0000-000000000005', 'invalid-batch@example.test',
-      '{"provision_alumni_profile":"true","first_name":"Invalid","last_name":"Batch","student_number":"UNIQUE-BATCH-TEST","graduation_year":"2099"}'::jsonb);
+      '{"provisioning_token":"10000000-0000-0000-0000-000000000005"}'::jsonb);
     raise exception 'expected unknown graduation batch to fail';
-  exception when foreign_key_violation then
-    null;
+  exception when foreign_key_violation then null;
   end;
   if exists (select 1 from auth.users where id = '00000000-0000-0000-0000-000000000005') then
     raise exception 'invalid graduation batch left an orphan Auth user';
   end if;
 end
 $$;
+select public.cancel_alumni_invite_profile('10000000-0000-0000-0000-000000000005');
 
-select 'Auth/profile trigger integration tests passed' as result;
+select 'Trusted Auth/profile trigger integration tests passed' as result;
