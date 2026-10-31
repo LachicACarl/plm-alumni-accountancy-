@@ -8,7 +8,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import PublicLayout from "../layouts/PublicLayout";
-import { supabase } from "../lib/supabase";
+import { fetchAllPublicAlumni } from "../lib/publicAlumni";
 import plmCampus from "../assets/plm-campus.jpg";
 
 const safeImage = (value) =>
@@ -32,14 +32,16 @@ export default function Alumni() {
     async function loadAlumni() {
       setLoading(true);
       setError("");
-      const { data, error: requestError } = await supabase.rpc("get_public_alumni");
+      let records;
+      let requestError;
+      try { records = await fetchAllPublicAlumni(); } catch (caughtError) { requestError = caughtError; }
 
       if (!active) return;
       if (requestError) {
         setError("The alumni directory is temporarily unavailable. Please try again later.");
         setAlumni([]);
       } else {
-        setAlumni(data ?? []);
+        setAlumni(records ?? []);
       }
       setLoading(false);
     }
