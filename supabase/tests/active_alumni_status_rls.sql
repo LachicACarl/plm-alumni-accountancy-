@@ -90,7 +90,7 @@ create policy "test legacy storage access" on storage.objects for all to authent
 \i supabase/migrations/20261031150000_enforce_active_alumni_resource_access.sql
 
 set role authenticated;
-do $
+do $$
 begin
   if not has_table_privilege('authenticated', 'public.profiles', 'SELECT') then
     raise exception 'Authenticated role must retain profile SELECT';
