@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 
@@ -6,7 +6,7 @@ export default function ProtectedRoute({ children }) {
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);\n  const [verificationKey, setVerificationKey] = useState(0);
 
-  const verifyAlumniSession = useCallback(async (session) => {
+  async function verifyAlumniSession(session) {
     if (!session?.user?.id) {
       setAuthenticated(false);
       setLoading(false);
@@ -43,7 +43,7 @@ export default function ProtectedRoute({ children }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -79,7 +79,7 @@ export default function ProtectedRoute({ children }) {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [verifyAlumniSession]);
+  }, []);
 
   if (loading) {
     return (
