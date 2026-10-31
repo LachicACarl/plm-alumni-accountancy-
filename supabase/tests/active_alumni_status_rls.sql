@@ -97,12 +97,12 @@ create policy "test legacy storage access" on storage.objects for all to authent
 \i supabase/migrations/20261031140000_enforce_active_alumni_status.sql
 \i supabase/migrations/20261031150000_enforce_active_alumni_resource_access.sql
 
-do $
+do $$
 begin
   if not (select relrowsecurity from pg_class where oid = 'public.profiles'::regclass) then
     raise exception 'The account-status migration must enable RLS on public.profiles';
   end if;
-end $;
+end $$;
 
 set role authenticated;
 do $$
@@ -130,7 +130,7 @@ begin
   end if;
 end $$;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', false);
-do $
+do $$
 begin
   if not public.is_active_alumni(auth.uid()) then
     raise exception 'Active-alumni helper must identify the authenticated active alumnus';
@@ -141,8 +141,8 @@ begin
   if public.is_account_admin('00000000-0000-0000-0000-000000000003') then
     raise exception 'Admin helper must not disclose another user role';
   end if;
-end $;
-do $
+end $$;
+do $$
 begin
   begin
     perform public.set_alumni_account_status(
@@ -199,6 +199,8 @@ begin
   exception when insufficient_privilege then
     null;
   end;
+  insert into storage.objects(id,bucket_id,name)
+  values ('30000000-0000-0000-0000-000000000006','alumni-credentials',auth.uid()::text||'/new.pdf');
   begin
     insert into public.credentials(id,profile_id,credential_type,file_url)
     values ('10000000-0000-0000-0000-000000000003',auth.uid(),'Academic',auth.uid()::text||'/new.pdf');
@@ -355,7 +357,7 @@ begin
   if (select count(*) from public.credentials) <> 3 then
     raise exception 'Administrator must retain credential review access';
   end if;
-  if (select count(*) from storage.objects where bucket_id='alumni-credentials') <> 2 then
+  if (select count(*) from storage.objects where bucket_id='alumni-credentials') <> 4 then
     raise exception 'Administrator must retain access to credential files';
   end if;
 end $$;
