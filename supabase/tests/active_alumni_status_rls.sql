@@ -75,7 +75,7 @@ insert into storage.objects(id,bucket_id,name) values
 grant usage on schema public, auth, storage to authenticated;
 grant execute on function auth.uid() to authenticated;
 grant execute on function storage.foldername(text) to authenticated;
-grant select, update on public.profiles to authenticated;
+grant select on public.profiles to authenticated;
 grant select, insert, update, delete on public.credentials, public.achievements, storage.objects to authenticated;
 
 -- Simulate older broad permissive policies to prove the restrictive guards
@@ -202,13 +202,13 @@ begin
   if not exists (select 1 from public.profiles where id=auth.uid() and role='admin') then
     raise exception 'Administrator must retain profile read access';
   end if;
-  if not exists (select 1 from public.profiles where id='00000000-0000-0000-0000-000000000002') then
-    raise exception 'Administrator must retain full profile directory access';
-  end if;
   update public.profiles set account_status='active'
     where id='00000000-0000-0000-0000-000000000002';
   if not exists (select 1 from public.profiles where id='00000000-0000-0000-0000-000000000002' and account_status='active') then
     raise exception 'Administrator must be able to reactivate an alumnus';
+  end if;
+  if not exists (select 1 from public.profiles where id='00000000-0000-0000-0000-000000000002') then
+    raise exception 'Administrator must retain full profile directory access';
   end if;
   if (select count(*) from public.credentials) <> 3 then
     raise exception 'Administrator must retain credential review access';
