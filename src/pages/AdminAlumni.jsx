@@ -500,7 +500,7 @@ export default function AdminAlumni() {
                     </h2>
 
                     <p className="mt-1 text-sm text-white/60">
-                      Create a new alumni profile record.
+                      Send a secure sign-in invitation and create the matching alumni profile.
                     </p>
                   </div>
 
@@ -524,12 +524,11 @@ export default function AdminAlumni() {
 
                   const payload = {
                     email: String(formData.get("email") || "").trim(),
-                    password: String(formData.get("password") || ""),
                     first_name: String(formData.get("first_name") || "").trim(),
-                    middle_name: "",
+                    middle_name: String(formData.get("middle_name") || "").trim(),
                     last_name: String(formData.get("last_name") || "").trim(),
                     student_number: String(formData.get("student_number") || "").trim(),
-                    graduation_year: Number(formData.get("graduation_year") || 0),
+                    graduation_year: Number(formData.get("graduation_year") || 0) || null,
                     profession: String(formData.get("profession") || "").trim(),
                     company: String(formData.get("company") || "").trim(),
                   };
@@ -561,7 +560,7 @@ export default function AdminAlumni() {
                       );
                     }
 
-                    alert("Alumni account created successfully.");
+                    alert("Invitation sent successfully. The alumnus can use the email link to set their password.");
                     form.reset();
                     setShowAddModal(false);
                     window.location.reload();
@@ -637,20 +636,6 @@ export default function AdminAlumni() {
                     />
                   </div>
 
-                  <div className="sm:col-span-2">
-                    <label className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
-                      Temporary Password
-                    </label>
-                    <input
-                      type="password"
-                      name="password"
-                      placeholder="Minimum 8 characters"
-                      minLength={8}
-                      required
-                      className="w-full rounded-xl border border-[#d8d2c2] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#18392b] focus:ring-2 focus:ring-[#18392b]/10"
-                    />
-                  </div>
-
                   <div>
                     <label className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
                       Profession
@@ -682,7 +667,7 @@ export default function AdminAlumni() {
                   </p>
 
                   <p className="mt-1 text-xs leading-5 text-gray-500">
-                    This action creates an alumni sign-in account in Supabase Authentication and saves the matching alumni profile. Share the temporary password securely and ask the alumnus to change it after signing in.
+                    This sends a one-time invitation email. The alumnus sets their own password through the secure invitation link. to change it after signing in.
                   </p>
                 </div>
 
