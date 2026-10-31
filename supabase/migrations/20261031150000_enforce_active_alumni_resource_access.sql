@@ -282,10 +282,33 @@ create policy "Admin only credential object updates"
     or (select public.is_account_admin())
   );
 
+drop policy if exists "Active alumni cleanup unlinked credential uploads" on storage.objects;
+create policy "Active alumni cleanup unlinked credential uploads"
+  on storage.objects for delete to authenticated
+  using (
+    bucket_id = 'alumni-credentials'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+    and (select public.is_active_alumni())
+    and not exists (
+      select 1 from public.credentials c
+      where c.profile_id = (select auth.uid())
+        and c.file_url = storage.objects.name
+    )
+  );
+
 drop policy if exists "Admin only credential object deletes" on storage.objects;
 create policy "Admin only credential object deletes"
   on storage.objects as restrictive for delete to authenticated
   using (
     bucket_id <> 'alumni-credentials'
     or (select public.is_account_admin())
+    or (
+      (storage.foldername(name))[1] = (select auth.uid())::text
+      and (select public.is_active_alumni())
+      and not exists (
+        select 1 from public.credentials c
+        where c.profile_id = (select auth.uid())
+          and c.file_url = storage.objects.name
+      )
+    )
   );
