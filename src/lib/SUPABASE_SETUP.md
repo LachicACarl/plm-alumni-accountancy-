@@ -172,6 +172,7 @@ delivery, configure a verified custom SMTP provider and check its delivery
 logs. Supabase Auth logs and SMTP provider logs should be used to diagnose
 missing recovery emails.
 
-The reset page accepts a password change only after the Supabase client emits
-the `PASSWORD_RECOVERY` auth event with an active session. A normal existing
-login session is not treated as a recovery authorization.
+The reset page accepts password changes after a `PASSWORD_RECOVERY` event with
+an active session, or after a `SIGNED_IN` event when the callback URL explicitly
+identifies a Supabase invitation (`type=invite`). A normal existing login
+session is not treated as proof of a recovery or invitation authorization.
