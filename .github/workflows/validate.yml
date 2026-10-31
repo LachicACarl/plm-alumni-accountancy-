@@ -31,6 +31,12 @@ jobs:
         run: npm ci
       - name: Check Supabase Edge Function
         run: deno check --config supabase/functions/create-alumni/deno.json supabase/functions/create-alumni/index.ts
+      - name: Test Supabase Edge Function with mocked client
+        env:
+          FRONTEND_ORIGIN: https://plm-alumni-accountancy.onrender.com
+          SUPABASE_URL: https://project.example.test
+          SUPABASE_SERVICE_ROLE_KEY: test-only-placeholder
+        run: deno test --allow-env --config supabase/functions/create-alumni/deno.json supabase/functions/create-alumni/index.test.ts
       - name: Start ephemeral PostgreSQL for migration tests
         run: |
           sudo apt-get update
