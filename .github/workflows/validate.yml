@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - fix/home-image-404
+      - fix/admin-system-improvements
   pull_request:
     branches:
       - main
