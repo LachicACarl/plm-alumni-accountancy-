@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Search,
   UserRound,
-  MapPin,
   BriefcaseBusiness,
   GraduationCap,
   Users,
