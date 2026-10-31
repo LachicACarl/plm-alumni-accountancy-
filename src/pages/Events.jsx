@@ -138,6 +138,11 @@ export default function Events() {
                           image.dataset.fallbackApplied = "true";
                           image.src = eventImage;
                         }}
+                        onLoad={(imageEvent) => {
+                          if (imageEvent.currentTarget.src === eventImage) {
+                            delete imageEvent.currentTarget.dataset.fallbackApplied;
+                          }
+                        }}
                         className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                       />
 
