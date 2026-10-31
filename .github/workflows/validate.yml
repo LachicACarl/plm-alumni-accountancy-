@@ -3,7 +3,7 @@ name: Validate
 on:
   push:
     branches:
-      - fix/home-image-404
+      - main
   pull_request:
     branches:
       - main
