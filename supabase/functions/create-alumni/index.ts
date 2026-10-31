@@ -147,7 +147,7 @@ export function createAlumniHandler(clientFactory: typeof createClient = createC
     }, 201, origin);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error.";
-    const validationError = /required|must be|valid|characters or fewer/i.test(message);
+    const validationError = error instanceof SyntaxError || /required|must be|valid|characters or fewer/i.test(message);
     console.error("create-alumni request failed:", message);
     return jsonResponse({ error: message }, validationError ? 400 : 500, origin);
   }
