@@ -55,7 +55,7 @@ export default function Login() {
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("role, first_name, last_name")
+        .select("role, account_status, first_name, last_name")
         .eq("id", data.user.id)
         .single();
 
@@ -67,6 +67,11 @@ export default function Login() {
       if (profile.role !== "alumni") {
         await supabase.auth.signOut();
         throw new Error("This account is not an alumni account.");
+      }
+
+      if ((profile.account_status ?? "active") !== "active") {
+        await supabase.auth.signOut();
+        throw new Error("Your alumni account is inactive. Please contact the administrator.");
       }
 
       if (remember) {
