@@ -20,6 +20,7 @@ migration in `supabase/migrations/` in ascending filename order:
 3. `20261031130000_add_homepage_content_management.sql`
 4. `20261031140000_enforce_active_alumni_status.sql`
 5. `20261031150000_enforce_active_alumni_resource_access.sql`
+6. `20261031160000_public_directory_and_batch_content.sql`
 
 The admin invitation Edge Function depends on the private provisioning RPC
 created by migration 2. Do not deploy the function until this migration has
@@ -28,6 +29,9 @@ been applied.
 Apply and validate migrations in an isolated staging project before using
 them in production. SQL regression tests under `supabase/tests/` are designed
 for disposable PostgreSQL databases and must never be run against production.
+Migration 6 adds the batch image URL, public batch read/admin-only write
+policies, and `get_public_alumni()`. The public directory RPC returns only
+active alumni and excludes email, phone, address, and student number.
 
 ## Administrator-created alumni invitations
 
