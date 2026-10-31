@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Eye, EyeOff, LockKeyhole } from "lucide-react";
 import plmCampus from "../assets/plm-campus.jpg";
-import plmLogo from "../../assets/plm-accountancy-logo.svg";
+const plmLogo = "/assets/plm-accountancy-logo.svg";
 import { supabase } from "../lib/supabase";
 
 export default function PasswordReset() {
@@ -24,17 +24,30 @@ export default function PasswordReset() {
     // Ordinary pre-existing sessions must not unlock password changes.
     const inviteFlow = new URLSearchParams(window.location.hash.replace(/^#/, "")).get("type") === "invite";
 
+    const markReady = () => {
+      if (!active) return;
+      window.clearTimeout(timeoutId);
+      setRecoveryReady(true);
+      setChecking(false);
+      setError("");
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (!active) return;
-        if ((event === "PASSWORD_RECOVERY" || (inviteFlow && event === "SIGNED_IN")) && session) {
-          window.clearTimeout(timeoutId);
-          setRecoveryReady(true);
-          setChecking(false);
-          setError("");
+        if (session && (event === "PASSWORD_RECOVERY" || (inviteFlow && event === "SIGNED_IN"))) {
+          markReady();
         }
       }
     );
+
+    // Supabase may exchange the invite token before this page mounts.
+    // Only inspect the current session when the URL explicitly identifies an invite.
+    if (inviteFlow) {
+      supabase.auth.getSession().then(({ data, error: sessionError }) => {
+        if (!sessionError && data.session) markReady();
+      });
+    }
 
     // A normal existing session is deliberately not accepted as proof of recovery or invitation.
     timeoutId = window.setTimeout(() => {
