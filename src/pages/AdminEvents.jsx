@@ -572,8 +572,10 @@ export default function AdminEvents() {
                             src={event.image_url.trim()}
                             alt={event.title}
                             onError={(imageEvent) => {
-                              imageEvent.currentTarget.onerror = null;
-                              imageEvent.currentTarget.src = fallbackEventImage;
+                              const image = imageEvent.currentTarget;
+                              if (image.dataset.fallbackApplied === "true") return;
+                              image.dataset.fallbackApplied = "true";
+                              image.src = fallbackEventImage;
                             }}
                             className="h-full w-full object-cover"
                           />
