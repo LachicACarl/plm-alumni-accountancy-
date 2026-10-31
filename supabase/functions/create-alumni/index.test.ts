@@ -8,10 +8,10 @@ type MockOptions = {
 
 function makeHandler(options: MockOptions = {}) {
   let inviteCalls = 0;
-  let invitePayload: Record<string, unknown> | null = null;
+  let invitePayload: Record<string, unknown> | null = null;\n  const rpcCalls: Array<{ name: string; args: Record<string, unknown> }> = [];
 
   const fakeClient = {
-    auth: {
+    rpc: async (name: string, args: Record<string, unknown>) => {\n      rpcCalls.push({ name, args });\n      return { data: null, error: null };\n    },\n    auth: {
       getUser: async () => ({
         data: { user: { id: "admin-user" } },
         error: null,
@@ -46,7 +46,7 @@ function makeHandler(options: MockOptions = {}) {
   return {
     handler: createAlumniHandler(factory),
     getInviteCalls: () => inviteCalls,
-    getInvitePayload: () => invitePayload,
+    getInvitePayload: () => invitePayload,\n    getRpcCalls: () => rpcCalls,
   };
 }
 
@@ -97,7 +97,7 @@ Deno.test("returns 500 when Supabase rejects invitation/profile transaction", as
   const mock = makeHandler({ inviteError: "duplicate key value violates unique constraint" });
   const response = await mock.handler(request(validBody));
   if (response.status !== 500) throw new Error("Expected a failed provisioning response.");
-  if (mock.getInviteCalls() !== 1) throw new Error("Expected one invite attempt.");
+  if (mock.getInviteCalls() !== 1) throw new Error("Expected one invite attempt.");\n  if (!mock.getRpcCalls().some((call) => call.name === "cancel_alumni_invite_profile")) {\n    throw new Error("Failed invitations must clean up their trusted provisioning ticket.");\n  }
 });
 
 Deno.test("rejects non-administrator callers", async () => {
