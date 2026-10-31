@@ -34,7 +34,7 @@ export default function Home() {
           footer: { ...defaults.footer, ...saved.footer },
           statistics: Array.isArray(saved.statistics) ? saved.statistics.slice(0, 3) : defaults.statistics,
           batches: Array.isArray(saved.batches) ? saved.batches : defaults.batches,
-          memories: Array.isArray(saved.memories) ? saved.memories.slice(0, 5) : defaults.memories,
+          memories: Array.isArray(saved.memories) ? saved.memories.slice(0, 10) : defaults.memories,
         });
       }).catch(() => {});
     return () => { active = false; };
