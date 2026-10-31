@@ -30,7 +30,8 @@ function cleanText(value: unknown, field: string, maxLength: number, required = 
   return normalized || null;
 }
 
-export function createAlumniHandler(clientFactory: typeof createClient = createClient) {\n  return async (req: Request): Promise<Response> => {
+export function createAlumniHandler(clientFactory: typeof createClient = createClient) {
+  return async (req: Request): Promise<Response> => {
   const origin = req.headers.get("Origin");
 
   if (req.method === "OPTIONS") {
@@ -150,4 +151,9 @@ export function createAlumniHandler(clientFactory: typeof createClient = createC
     console.error("create-alumni request failed:", message);
     return jsonResponse({ error: message }, validationError ? 400 : 500, origin);
   }
-  };\n}\n\nif (import.meta.main) {\n  Deno.serve(createAlumniHandler());\n}\n
+  };
+}
+
+if (import.meta.main) {
+  Deno.serve(createAlumniHandler());
+}
