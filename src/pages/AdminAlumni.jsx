@@ -114,11 +114,10 @@ export default function AdminAlumni() {
     setUpdatingStatusId(alumni.id);
     setError("");
 
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update({ account_status: nextStatus })
-      .eq("id", alumni.id)
-      .eq("role", "alumni");
+    const { error: updateError } = await supabase.rpc("set_alumni_account_status", {
+      p_alumni_id: alumni.id,
+      p_account_status: nextStatus,
+    });
 
     if (updateError) {
       setError(`Unable to update ${alumni.name}'s status: ${updateError.message}`);
