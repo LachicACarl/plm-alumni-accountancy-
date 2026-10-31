@@ -92,6 +92,9 @@ create policy "test legacy storage access" on storage.objects for all to authent
 set role authenticated;
 do $
 begin
+  if not has_table_privilege('authenticated', 'public.profiles', 'SELECT') then
+    raise exception 'Authenticated role must retain profile SELECT';
+  end if;
   if has_table_privilege('authenticated', 'public.profiles', 'UPDATE') then
     raise exception 'Alumni must not retain table-wide UPDATE on profiles';
   end if;
