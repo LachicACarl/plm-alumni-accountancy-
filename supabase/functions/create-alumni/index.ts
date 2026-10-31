@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const allowedOrigin = Deno.env.get("FRONTEND_ORIGIN")?.trim() || "";
 
-function corsHeaders(origin: string | null) {
+function corsHeaders(_origin: string | null) {
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
     });
 
     const authHeader = req.headers.get("Authorization");
-    const tokenMatch = authHeader?.match(/^Bearer\s+(.+)$/i);
+    const tokenMatch = authHeader?.match(/^Bearer\\s+(.+)$/i);
     if (!tokenMatch) {
       return jsonResponse({ error: "Missing or invalid authorization." }, 401, origin);
     }
@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
     }
 
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
-    if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (email.length > 254 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
       return jsonResponse({ error: "Enter a valid email address." }, 400, origin);
     }
 
@@ -101,55 +101,34 @@ Deno.serve(async (req) => {
       }
     }
 
-    const appOrigin = allowedOrigin.replace(/\/$/, "");
+    const appOrigin = allowedOrigin.replace(/\\/$/, "");
 
-    // Supabase inviteUserByEmail creates the Auth user and sends the invitation
-    // in one operation. It must not be preceded by createUser for this email.
+    // The database trigger creates public.profiles as part of the auth.users
+    // insert transaction. Any profile constraint failure therefore aborts
+    // account creation before Supabase sends the invitation email.
     const { data: invitedUser, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      data: { first_name: firstName, middle_name: middleName, last_name: lastName },
+      data: {
+        provision_alumni_profile: "true",
+        first_name: firstName,
+        middle_name: middleName,
+        last_name: lastName,
+        student_number: studentNumber,
+        graduation_year: graduationYear === null ? "" : String(graduationYear),
+        profession: profession ?? "",
+        company: company ?? "",
+      },
       redirectTo: appOrigin + "/reset-password",
     });
 
     if (inviteError || !invitedUser.user) {
-      throw new Error(inviteError?.message || "Unable to send alumni invitation.");
-    }
-
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from("profiles")
-      .insert({
-        id: invitedUser.user.id,
-        first_name: firstName,
-        middle_name: middleName,
-        last_name: lastName,
-        email,
-        student_number: studentNumber,
-        graduation_year: graduationYear,
-        profession,
-        company,
-        role: "alumni",
-      })
-      .select("id, first_name, middle_name, last_name, email, student_number, graduation_year, profession, company, role")
-      .single();
-
-    if (profileError) {
-      // Do not delete the invited Auth user: Supabase has already emailed a
-      // valid invite link. Report the partial state so an admin can repair the
-      // profile instead of leaving the recipient with a dead invitation.
-      console.error("Invitation sent but alumni profile insert failed:", {
-        userId: invitedUser.user.id,
-        error: profileError.message,
-      });
-      return jsonResponse({
-        error: "The invitation was sent, but the alumni profile could not be saved. Contact an administrator with user ID " + invitedUser.user.id + " before the recipient signs in.",
-        invitationSent: true,
-        userId: invitedUser.user.id,
-      }, 500, origin);
+      console.error("Alumni invitation/account provisioning failed:", inviteError?.message || "No user returned.");
+      throw new Error(inviteError?.message || "Unable to create the alumni profile and send the invitation.");
     }
 
     return jsonResponse({
       success: true,
       user: { id: invitedUser.user.id, email: invitedUser.user.email },
-      profile,
+      invitationSent: true,
     }, 201, origin);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error.";
