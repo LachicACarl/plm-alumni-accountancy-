@@ -667,7 +667,7 @@ export default function AdminAlumni() {
                   </p>
 
                   <p className="mt-1 text-xs leading-5 text-gray-500">
-                    This sends a one-time invitation email. The alumnus sets their own password through the secure invitation link. to change it after signing in.
+                    This sends a one-time invitation email. The alumnus sets their own password through the secure invitation link.
                   </p>
                 </div>
 
