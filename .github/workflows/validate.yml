@@ -57,6 +57,7 @@ jobs:
           PGDATABASE: alumni_test
         run: |
           psql -v ON_ERROR_STOP=1 -c "create schema auth;"
+          psql -v ON_ERROR_STOP=1 -c "create table auth.users (id uuid primary key, email text unique, raw_user_meta_data jsonb not null default '{}'::jsonb);"
           psql -v ON_ERROR_STOP=1 -c "create role anon nologin;"
           psql -v ON_ERROR_STOP=1 -c "create role authenticated nologin;"
           psql -v ON_ERROR_STOP=1 -c "create role service_role nologin;"
