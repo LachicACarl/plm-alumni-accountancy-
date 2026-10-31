@@ -108,9 +108,24 @@ begin
   if (select count(*) from public.list_active_batch_members(2024)) <> 2 then
     raise exception 'Batch directory must return active batch members only';
   end if;
+  if exists (select 1 from public.list_active_batch_members(2025)) then
+    raise exception 'Active alumnus must not read a different graduation cohort';
+  end if;
   begin
     update public.profiles set account_status='inactive' where id=auth.uid();
     raise exception 'Active alumnus unexpectedly changed their own account status';
+  exception when insufficient_privilege then
+    null;
+  end;
+  begin
+    update public.profiles set graduation_year=2025 where id=auth.uid();
+    raise exception 'Active alumnus unexpectedly changed their graduation year';
+  exception when insufficient_privilege then
+    null;
+  end;
+  begin
+    update public.profiles set student_number='CHANGED-BY-ALUMNI' where id=auth.uid();
+    raise exception 'Active alumnus unexpectedly changed their student number';
   exception when insufficient_privilege then
     null;
   end;
@@ -122,10 +137,24 @@ begin
     raise exception 'Active alumnus could not upload own credential: %', SQLERRM;
   end;
   begin
+    insert into public.credentials(id,profile_id,credential_type,file_url,status,verified_by,verified_at)
+    values ('10000000-0000-0000-0000-000000000005',auth.uid(),'Academic',auth.uid()::text||'/forged.pdf','verified',auth.uid(),now());
+    raise exception 'Active alumnus unexpectedly self-verified a credential';
+  exception when insufficient_privilege then
+    null;
+  end;
+  begin
     insert into storage.objects(id,bucket_id,name)
     values ('30000000-0000-0000-0000-000000000004','alumni-credentials',auth.uid()::text||'/active-upload.pdf');
   exception when others then
     raise exception 'Active alumnus could not upload own credential file: %', SQLERRM;
+  end;
+  begin
+    update storage.objects set name=auth.uid()::text||'/tampered.pdf'
+    where id='30000000-0000-0000-0000-000000000001';
+    raise exception 'Active alumnus unexpectedly replaced an existing credential file';
+  exception when insufficient_privilege then
+    null;
   end;
 end $$;
 
