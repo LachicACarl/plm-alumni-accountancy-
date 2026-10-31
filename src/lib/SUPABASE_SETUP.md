@@ -62,6 +62,85 @@ Use only the Supabase publishable/anon key in frontend variables. Never add
 `SUPABASE_SERVICE_ROLE_KEY` or any other server secret to `.env`, hosting
 frontend variables, or source code.
 
+## Administrator-created alumni invitations
+
+The admin invitation endpoint requires the database provisioning migration and a
+server-side Edge Function secret. The setup SQL files above do **not** create
+these objects by themselves.
+
+### Required database migration
+
+Before enabling the updated `create-alumni` Edge Function, apply:
+
+```text
+supabase/migrations/20261031120000_create_alumni_profile_on_invite.sql
+```
+
+This migration creates a private one-time provisioning-ticket table, service-role-only
+RPCs, and the Auth trigger that creates the alumni profile in the same database
+transaction as the invited Auth user. It must be applied once per environment.
+
+If the frontend change that reads `profiles.account_status` is also being deployed,
+apply the account-status migration from PR #5 first:
+
+```text
+supabase/migrations/20261030090000_add_alumni_account_status.sql
+```
+
+For a fresh isolated development database, link the Supabase CLI to that
+development project and run `supabase db push` only after reviewing the pending
+migration list. Do not run it against the production project as a test. This
+repository intentionally does not auto-apply migrations or mutate a connected
+project during CI.
+
+### Edge Function secret and deployment
+
+Set the function's allowed frontend origin as a server-side secret (never a
+`VITE_*` variable):
+
+```bash
+supabase secrets set FRONTEND_ORIGIN=https://plm-alumni-accountancy.onrender.com
+```
+
+For local development, use the exact local frontend origin instead, for example
+`http://localhost:5173`.
+
+The function verifies the caller's Bearer token with Supabase Auth and checks
+the caller's administrator role itself. The function config therefore keeps
+platform JWT verification disabled; do not remove the in-function
+authentication checks:
+
+```toml
+[functions.create-alumni]
+verify_jwt = false
+```
+
+After the migration and secret are configured in the intended environment,
+deploy the function explicitly:
+
+```bash
+supabase functions deploy create-alumni --no-verify-jwt
+```
+
+### Auth invitation redirect and email
+
+In **Supabase Dashboard → Authentication → URL Configuration**, add the exact
+invitation callback URL:
+
+```text
+https://plm-alumni-accountancy.onrender.com/reset-password
+```
+
+For local development, add the exact local callback URL as well. Ensure the
+Auth email provider is enabled and test actual invite delivery, the invite
+callback, initial password setup, and subsequent sign-in in an isolated
+environment before production deployment.
+
+**Production safety:** the connected Supabase project is production. Do not
+apply these migrations, change Auth URL/email settings, set secrets, or deploy
+the function there until a reviewed production release is explicitly approved.
+Never create a paid Supabase branch or project for this workflow.
+
 ## Security
 
 Row Level Security (RLS) should be enabled before production deployment.
