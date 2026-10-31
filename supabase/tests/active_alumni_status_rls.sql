@@ -108,10 +108,14 @@ begin
      or not has_column_privilege('authenticated', 'public.profiles', 'bio', 'UPDATE') then
     raise exception 'Alumni must retain intended editable profile column privileges';
   end if;
-  if has_column_privilege('authenticated', 'public.profiles', 'student_number', 'UPDATE')
+  if has_column_privilege('authenticated', 'public.profiles', 'id', 'UPDATE')
+     or has_column_privilege('authenticated', 'public.profiles', 'student_number', 'UPDATE')
+     or has_column_privilege('authenticated', 'public.profiles', 'email', 'UPDATE')
      or has_column_privilege('authenticated', 'public.profiles', 'graduation_year', 'UPDATE')
      or has_column_privilege('authenticated', 'public.profiles', 'role', 'UPDATE')
-     or has_column_privilege('authenticated', 'public.profiles', 'account_status', 'UPDATE') then
+     or has_column_privilege('authenticated', 'public.profiles', 'account_status', 'UPDATE')
+     or has_column_privilege('authenticated', 'public.profiles', 'created_at', 'UPDATE')
+     or has_column_privilege('authenticated', 'public.profiles', 'updated_at', 'UPDATE') then
     raise exception 'Alumni must not update protected profile columns';
   end if;
 end $$;
