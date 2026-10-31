@@ -214,7 +214,6 @@ jobs:
           grant execute on function storage.foldername(text) to authenticated;
           grant select, update on public.profiles to authenticated;
           grant select, insert, update, delete on public.credentials, public.achievements, storage.objects to authenticated;
-          grant select, update on public.profiles to authenticated;
           SQL
       - name: Verify active and inactive alumni access boundaries
         env:
