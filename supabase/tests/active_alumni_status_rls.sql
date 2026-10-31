@@ -1,19 +1,11 @@
 -- Disposable PostgreSQL regression test for active/inactive alumni access.
--- Run after applying the account status and active alumni policies.
 
 \set ON_ERROR_STOP on
-
 create schema if not exists auth;
-create table if not exists auth.users (
-  id uuid primary key
-);
+create table if not exists auth.users (id uuid primary key);
 create or replace function auth.uid()
-returns uuid
-language sql
-stable
-as $$
-  select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
-$$;
+returns uuid language sql stable
+as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id),
@@ -28,12 +20,11 @@ insert into auth.users(id) values
  ('00000000-0000-0000-0000-000000000002'),
  ('00000000-0000-0000-0000-000000000003')
 on conflict do nothing;
-
 insert into public.profiles(id, role, account_status) values
  ('00000000-0000-0000-0000-000000000001', 'alumni', 'active'),
  ('00000000-0000-0000-0000-000000000002', 'alumni', 'inactive'),
  ('00000000-0000-0000-0000-000000000003', 'admin', 'active')
-on conflict (id) do update set role = excluded.role, account_status = excluded.account_status;
+on conflict (id) do update set role=excluded.role, account_status=excluded.account_status;
 
 grant usage on schema public, auth to authenticated;
 grant execute on function auth.uid() to authenticated;
@@ -44,34 +35,31 @@ select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001
 do $$
 begin
   if (select count(*) from public.profiles) <> 1 then
-    raise exception 'Active alumnus must see exactly their own row';
+    raise exception 'Active alumnus must see only their own profile';
   end if;
-  update public.profiles set account_status = 'inactive' where id = auth.uid();
-  if not exists (select 1 from public.profiles where id = auth.uid() and account_status = 'active') then
-    raise exception 'Alumnus must not be able to deactivate themselves';
+  update public.profiles set account_status='inactive' where id=auth.uid();
+  if not exists (select 1 from public.profiles where id=auth.uid() and account_status='active') then
+    raise exception 'Active alumnus must not deactivate their own profile';
   end if;
-end;
-$$;
+end $$;
 
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', false);
 do $$
 begin
-  if exists (select 1 from public.profiles where id = auth.uid()) then
-    raise exception 'Inactive alumnus must not read their own profile';
+  if exists (select 1 from public.profiles where id=auth.uid()) then
+    raise exception 'Inactive alumnus must not read their profile';
   end if;
-  update public.profiles set role = 'admin' where id = auth.uid();
-  if exists (select 1 from public.profiles where id = auth.uid()) then
+  update public.profiles set role='admin' where id=auth.uid();
+  if exists (select 1 from public.profiles where id=auth.uid()) then
     raise exception 'Inactive alumnus must not update their profile';
   end if;
-end;
-$$;
+end $$;
 
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000003', false);
 do $$
 begin
-  if not exists (select 1 from public.profiles where id = auth.uid() and role = 'admin') then
+  if not exists (select 1 from public.profiles where id=auth.uid() and role='admin') then
     raise exception 'Administrator must retain profile read access';
   end if;
-end;
-$$;
+end $$;
 reset role;
