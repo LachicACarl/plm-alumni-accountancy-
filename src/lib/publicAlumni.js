@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { supabase } from "./supabase.js";
 
 // PostgREST may cap each RPC response at the project max_rows setting.
 // Fetch stable, ordered pages so public directories do not silently truncate.
