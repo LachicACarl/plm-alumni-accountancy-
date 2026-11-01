@@ -1,0 +1,37 @@
+name: Repair npm lockfile
+
+on:
+  push:
+    branches:
+      - integration/mainline-production-hardening
+
+permissions:
+  contents: write
+
+jobs:
+  refresh-lockfile:
+    if: contains(github.event.head_commit.message, 'Add Vitest test script and dependency') || contains(github.event.head_commit.message, 'Run frontend unit tests in validation workflow') || contains(github.event.head_commit.message, 'Repair npm lockfile')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out integration branch
+        uses: actions/checkout@v4
+        with:
+          ref: integration/mainline-production-hardening
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Regenerate package lock
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Commit regenerated lockfile
+        run: |
+          if git diff --quiet -- package-lock.json; then
+            echo "Lockfile already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "Repair npm lockfile for frontend tests"
+          git push origin HEAD:integration/mainline-production-hardening
