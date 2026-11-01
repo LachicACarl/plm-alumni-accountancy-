@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Home from "./pages/Home";
 import Batches from "./pages/Batches";
 import Events from "./pages/Events";
@@ -141,6 +141,9 @@ export default function App() {
             </AdminProtectedRoute>
           }
         />
+
+        {/* Recover gracefully from malformed or unknown URLs. */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
