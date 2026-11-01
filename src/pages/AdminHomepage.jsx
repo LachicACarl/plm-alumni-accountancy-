@@ -71,11 +71,15 @@ export default function AdminHomepage() {
   useEffect(() => {
     let active = true;
     fetchAllPublicAlumni()
-      .then(({ data, error: alumniError }) => {
-        if (!active || alumniError) return;
-        setAlumniOptions(data ?? []);
+      .then((alumniRecords) => {
+        if (active) setAlumniOptions(alumniRecords);
       })
-      .catch(() => {});
+      .catch((loadError) => {
+        if (active) {
+          console.error("Unable to load alumni spotlight options:", loadError);
+          setAlumniOptions([]);
+        }
+      });
     return () => { active = false; };
   }, []);
 
