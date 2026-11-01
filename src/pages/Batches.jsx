@@ -34,23 +34,28 @@ export default function Batches() {
     async function loadPage() {
       setLoading(true);
       setError("");
-      const [batchResult, alumniResult] = await Promise.all([
-        supabase.from("batches").select("id, year, description, highlights, image_url").order("year", { ascending: false }),
-        fetchAllPublicAlumni(),
-      ]);
+      try {
+        const [batchResult, alumniRecords] = await Promise.all([
+          supabase.from("batches").select("id, year, description, highlights, image_url").order("year", { ascending: false }),
+          fetchAllPublicAlumni(),
+        ]);
 
-      if (!active) return;
-      if (batchResult.error || alumniResult.error) {
+        if (!active) return;
+        if (batchResult.error) throw batchResult.error;
+
+        const records = batchResult.data ?? [];
+        setBatches(records);
+        setAlumni(alumniRecords);
+        if (records.length) setSelectedYear(String(records[0].year));
+      } catch (loadError) {
+        if (!active) return;
+        console.error("Unable to load batch information:", loadError);
         setError("Batch information is temporarily unavailable. Please try again later.");
         setBatches([]);
         setAlumni([]);
-      } else {
-        const records = batchResult.data ?? [];
-        setBatches(records);
-        setAlumni(alumniResult.data ?? []);
-        if (records.length) setSelectedYear(String(records[0].year));
+      } finally {
+        if (active) setLoading(false);
       }
-      setLoading(false);
     }
 
     loadPage();
