@@ -2,7 +2,7 @@ import { supabase } from "./supabase";
 
 // PostgREST may cap each RPC response at the project max_rows setting.
 // Fetch stable, ordered pages so public directories do not silently truncate.
-export async function fetchAllPublicAlumni({ pageSize = 500, maxPages = 100 } = {}) {
+export async function fetchAllPublicAlumni({ pageSize = 500, maxPages = 100, client = supabase } = {}) {
   if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 1000) {
     throw new RangeError("pageSize must be an integer between 1 and 1000.");
   }
@@ -13,7 +13,7 @@ export async function fetchAllPublicAlumni({ pageSize = 500, maxPages = 100 } = 
   const records = [];
   for (let page = 0; page < maxPages; page += 1) {
     const from = page * pageSize;
-    const { data, error } = await supabase
+    const { data, error } = await client
       .rpc("get_public_alumni")
       .order("id", { ascending: true })
       .range(from, from + pageSize - 1);
