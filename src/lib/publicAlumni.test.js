@@ -1,41 +1,62 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import test, { describe } from "node:test";
+import assert from "node:assert/strict";
+import { fetchAllPublicAlumni } from "./publicAlumni.js";
 
-const rpc = vi.fn();
-vi.mock("./supabase", () => ({ supabase: { rpc } }));
-
-const { fetchAllPublicAlumni } = await import("./publicAlumni");
-
-afterEach(() => rpc.mockReset());
+function createClient(pages, calls = []) {
+  return {
+    rpc(name) {
+      calls.push({ method: "rpc", name });
+      return {
+        order(column, options) {
+          calls.push({ method: "order", column, options });
+          return {
+            async range(from, to) {
+              calls.push({ method: "range", from, to });
+              const page = pages.shift();
+              if (page instanceof Error) return { data: null, error: page };
+              return { data: page, error: null };
+            },
+          };
+        },
+      };
+    },
+  };
+}
 
 describe("fetchAllPublicAlumni", () => {
-  it("loads ordered pages until the final short page", async () => {
-    const range = vi.fn()
-      .mockResolvedValueOnce({ data: [{ id: "a" }, { id: "b" }], error: null })
-      .mockResolvedValueOnce({ data: [{ id: "c" }], error: null });
-    const order = vi.fn(() => ({ range }));
-    rpc.mockReturnValue({ order });
-    await expect(fetchAllPublicAlumni({ pageSize: 2 })).resolves.toEqual([{ id: "a" }, { id: "b" }, { id: "c" }]);
-    expect(rpc).toHaveBeenCalledTimes(2);
-    expect(order).toHaveBeenCalledWith("id", { ascending: true });
-    expect(range).toHaveBeenNthCalledWith(1, 0, 1);
-    expect(range).toHaveBeenNthCalledWith(2, 2, 3);
+  test("loads ordered pages until the final short page", async () => {
+    const calls = [];
+    const client = createClient([[{ id: "a" }, { id: "b" }], [{ id: "c" }]], calls);
+    const result = await fetchAllPublicAlumni({ pageSize: 2, client });
+    assert.deepEqual(result, [{ id: "a" }, { id: "b" }, { id: "c" }]);
+    assert.equal(calls.filter((call) => call.method === "rpc").length, 2);
+    assert.deepEqual(calls.filter((call) => call.method === "order")[0], {
+      method: "order", column: "id", options: { ascending: true },
+    });
+    assert.deepEqual(calls.filter((call) => call.method === "range"), [
+      { method: "range", from: 0, to: 1 },
+      { method: "range", from: 2, to: 3 },
+    ]);
   });
 
-  it("throws rather than silently returning a truncated result at the page cap", async () => {
-    const range = vi.fn().mockResolvedValue({ data: [{ id: "a" }], error: null });
-    rpc.mockReturnValue({ order: vi.fn(() => ({ range })) });
-    await expect(fetchAllPublicAlumni({ pageSize: 1, maxPages: 2 })).rejects.toThrow("exceeded the safety limit of 2 pages");
+  test("throws rather than silently returning a truncated result at the page cap", async () => {
+    const client = createClient([[{ id: "a" }], [{ id: "b" }], [{ id: "c" }]]);
+    await assert.rejects(
+      fetchAllPublicAlumni({ pageSize: 1, maxPages: 2, client }),
+      /exceeded the safety limit of 2 pages/
+    );
   });
 
-  it("propagates RPC errors", async () => {
+  test("propagates RPC errors", async () => {
     const error = new Error("permission denied");
-    const range = vi.fn().mockResolvedValue({ data: null, error });
-    rpc.mockReturnValue({ order: vi.fn(() => ({ range })) });
-    await expect(fetchAllPublicAlumni()).rejects.toBe(error);
+    const client = createClient([error]);
+    await assert.rejects(fetchAllPublicAlumni({ client }), (actual) => actual === error);
   });
 
-  it("rejects invalid pagination settings", async () => {
-    await expect(fetchAllPublicAlumni({ pageSize: 0 })).rejects.toThrow(RangeError);
-    await expect(fetchAllPublicAlumni({ pageSize: 1001 })).rejects.toThrow(RangeError);
+  test("rejects invalid pagination settings", async () => {
+    const client = createClient([]);
+    await assert.rejects(fetchAllPublicAlumni({ pageSize: 0, client }), RangeError);
+    await assert.rejects(fetchAllPublicAlumni({ pageSize: 1001, client }), RangeError);
+    await assert.rejects(fetchAllPublicAlumni({ maxPages: 0, client }), RangeError);
   });
 });
