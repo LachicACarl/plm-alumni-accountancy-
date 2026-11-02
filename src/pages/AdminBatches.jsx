@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -87,7 +87,8 @@ export default function AdminBatches() {
     });
   }, [students, studentSearch, blockFilter]);
 
-  async function loadBatches() {
+  const loadBatches = useCallback(async () => {
+    setLoading(true);
     const { data, error } = await supabase
       .from("batches")
       .select("*")
@@ -105,11 +106,15 @@ export default function AdminBatches() {
     }
 
     setLoading(false);
-  }
+  }, []);
 
-  async function loadStudents(batchId = selectedBatchId) {
-    if (!batchId) return;
+  const loadStudents = useCallback(async (batchId = selectedBatchId) => {
+    if (!batchId) {
+      setStudents([]);
+      return;
+    }
 
+    setStudentsLoading(true);
     const { data, error } = await supabase
       .from("batch_students")
       .select("id, batch_id, full_name, student_number, status, cpa_passed, block_label, created_at")
@@ -130,15 +135,25 @@ export default function AdminBatches() {
     }
 
     setStudentsLoading(false);
-  }
-
-  useEffect(() => {
-    loadBatches();
-  }, []);
-
-  useEffect(() => {
-    if (selectedBatchId) loadStudents(selectedBatchId);
   }, [selectedBatchId]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadBatches();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [loadBatches]);
+
+  useEffect(() => {
+    if (!selectedBatchId) return undefined;
+
+    const timer = window.setTimeout(() => {
+      void loadStudents(selectedBatchId);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [selectedBatchId, loadStudents]);
 
   function resetForm() {
     setForm(emptyForm);
