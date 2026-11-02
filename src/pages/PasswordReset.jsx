@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Eye, EyeOff, LockKeyhole } from "lucide-react";
 import plmCampus from "../assets/plm-campus.jpg";
-const plmLogo = "/assets/plm-accountancy-logo.svg";
+import plmLogo from "../assets/plm-accountancy-logo.svg.png";
 import { supabase } from "../lib/supabase";
 
 export default function PasswordReset() {
@@ -105,7 +105,7 @@ export default function PasswordReset() {
       <div className="relative z-10 min-h-screen">
         <header className="px-5 py-5 sm:px-8 lg:px-12 lg:py-6">
           <Link to="/" className="inline-flex items-center gap-3">
-            <img src={plmLogo} alt="PLM College of Accountancy" className="h-14 w-auto object-contain sm:h-[70px]" />
+            <img src={plmLogo} alt="PLM College of Accountancy" className="h-14 w-14 object-contain sm:h-[70px] sm:w-[70px]" />
           </Link>
         </header>
         <main className="mx-auto flex min-h-[calc(100vh-105px)] max-w-[560px] items-center px-5 pb-10 sm:px-8">

@@ -11,6 +11,10 @@ export default function AdminLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showRecovery, setShowRecovery] = useState(false);
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
+  const [recoveryMessage, setRecoveryMessage] = useState("");
+  const [recoveryError, setRecoveryError] = useState("");
 
   const handleLogin = async (event) => {
     event.preventDefault();
@@ -66,6 +70,37 @@ export default function AdminLogin() {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRecovery = async (event) => {
+    event.preventDefault();
+    setRecoveryError("");
+    setRecoveryMessage("");
+
+    const normalizedEmail = email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      setRecoveryError("Enter a valid administrator email address.");
+      return;
+    }
+
+    setRecoveryLoading(true);
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        normalizedEmail,
+        { redirectTo: `${window.location.origin}/reset-password` }
+      );
+      if (resetError) throw resetError;
+      setRecoveryMessage(
+        "If an account exists for that email, a password reset link has been sent."
+      );
+    } catch (requestError) {
+      console.error("Administrator password recovery failed:", requestError);
+      setRecoveryError(
+        requestError.message || "Unable to send the reset email. Please try again later."
+      );
+    } finally {
+      setRecoveryLoading(false);
     }
   };
 
@@ -129,12 +164,22 @@ export default function AdminLogin() {
             </div>
 
             <form
-              onSubmit={handleLogin}
+              onSubmit={showRecovery ? handleRecovery : handleLogin}
               className="rounded-2xl border border-[#ddd7c8] bg-white p-6 shadow-sm sm:p-8"
             >
-              {error && (
-                <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {!showRecovery && error && (
+                <div role="alert" className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                   {error}
+                </div>
+              )}
+              {showRecovery && recoveryError && (
+                <div role="alert" className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {recoveryError}
+                </div>
+              )}
+              {showRecovery && recoveryMessage && (
+                <div role="status" className="mb-5 rounded-xl border border-[#b8d7b9] bg-[#edf8ee] px-4 py-3 text-sm text-[#286044]">
+                  {recoveryMessage}
                 </div>
               )}
 
@@ -164,7 +209,7 @@ export default function AdminLogin() {
                 </div>
               </div>
 
-              <div className="mt-5">
+              {!showRecovery && <div className="mt-5">
                 <label
                   htmlFor="admin-password"
                   className="mb-2 block text-sm font-semibold"
@@ -196,24 +241,61 @@ export default function AdminLogin() {
                     {showPassword ? "Hide" : "Show"}
                   </button>
                 </div>
-              </div>
+              </div>}
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#18392b] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#24513d] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <ShieldCheck size={18} />
-                {loading ? "Signing In..." : "Sign In as Admin"}
-              </button>
+              {showRecovery ? (
+                <button
+                  type="submit"
+                  disabled={recoveryLoading}
+                  className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#18392b] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#24513d] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {recoveryLoading ? "Sending Link..." : "Send Password Reset Link"}
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setError("");
+                      setRecoveryError("");
+                      setRecoveryMessage("");
+                      setShowRecovery(true);
+                    }}
+                    className="mt-3 text-sm font-semibold text-[#18392b] hover:text-[#9a7b16]"
+                  >
+                    Forgot Password?
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#18392b] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#24513d] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <ShieldCheck size={18} />
+                    {loading ? "Signing In..." : "Sign In as Admin"}
+                  </button>
+                </>
+              )}
 
               <div className="mt-6 border-t border-[#e4dfd3] pt-5 text-center">
-                <Link
+                {showRecovery ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowRecovery(false);
+                      setRecoveryError("");
+                      setRecoveryMessage("");
+                    }}
+                    className="text-sm font-semibold text-[#18392b] hover:text-[#9a7b16]"
+                  >
+                    Back to Admin Login
+                  </button>
+                ) : <Link
                   to="/login"
                   className="text-sm font-semibold text-[#18392b] hover:text-[#9a7b16]"
                 >
                   Alumni Login
-                </Link>
+                </Link>}
 
                 <span className="mx-2 text-slate-300">•</span>
 

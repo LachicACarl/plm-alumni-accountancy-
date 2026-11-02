@@ -42,7 +42,10 @@ that error by changing ownership or disabling RLS. If a migration fails,
 confirm it is absent from the migration history, then have the project owner
 review and run the complete migration script in order. Migration 7 keeps
 events and event/batch images publicly readable and limits their writes to
-administrators. It does not create or change Storage buckets.
+administrators. Migration 7 requires the existing `alumni-credentials`,
+`event-images`, and `batch-images` buckets. It makes credentials private and
+the two public-page image buckets public. Neither migration creates a bucket.
+Review bucket contents and access expectations before applying these settings.
 
 ## Administrator-created alumni invitations
 

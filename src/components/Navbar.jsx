@@ -2,7 +2,7 @@
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 
-const plmLogo = "/assets/plm-accountancy-logo.svg";
+import plmLogo from "../assets/plm-accountancy-logo.svg.png";
 
 export default function Navbar() {
   const location = useLocation();
@@ -34,7 +34,7 @@ export default function Navbar() {
           <img
             src={plmLogo}
             alt="Pamantasan ng Lungsod ng Maynila College of Accountancy"
-            className="h-[58px] w-auto object-contain"
+            className="h-[58px] w-[58px] object-contain"
           />
         </Link>
 

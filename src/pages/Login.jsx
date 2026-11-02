@@ -8,7 +8,7 @@ import {
   UserRound,
 } from "lucide-react";
 import plmCampus from "../assets/plm-campus.jpg";
-const plmLogo = "/assets/plm-accountancy-logo.svg";
+import plmLogo from "../assets/plm-accountancy-logo.svg.png";
 import { supabase } from "../lib/supabase";
 
 export default function Login() {
@@ -164,7 +164,7 @@ export default function Login() {
             <img
               src={plmLogo}
               alt="PLM College of Accountancy"
-              className="h-14 w-auto object-contain sm:h-[70px]"
+              className="h-14 w-14 object-contain sm:h-[70px] sm:w-[70px]"
             />
 
             <div className="hidden border-l border-[#183d2d]/20 pl-4 sm:block">
@@ -261,7 +261,7 @@ export default function Login() {
                       <img
                         src={plmLogo}
                         alt="PLM College of Accountancy"
-                        className="mx-auto h-20 w-auto object-contain"
+                        className="mx-auto h-20 w-20 object-contain"
                       />
 
                       <div className="mt-4">
