@@ -6,6 +6,7 @@ import {
   Users,
   Award,
   BriefcaseBusiness,
+  Search,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import PublicLayout from "../layouts/PublicLayout";
@@ -24,6 +25,11 @@ const displayName = (person) =>
 export default function Batches() {
   const [batches, setBatches] = useState([]);
   const [alumni, setAlumni] = useState([]);
+  const [roster, setRoster] = useState([]);
+  const [rosterLoading, setRosterLoading] = useState(false);
+  const [rosterError, setRosterError] = useState("");
+  const [rosterSearch, setRosterSearch] = useState("");
+  const [rosterBlock, setRosterBlock] = useState("all");
   const [selectedYear, setSelectedYear] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -77,6 +83,53 @@ export default function Batches() {
   const highlights = Array.isArray(selectedBatch?.highlights)
     ? selectedBatch.highlights.filter((item) => typeof item === "string" && item.trim())
     : [];
+
+  useEffect(() => {
+    let active = true;
+    async function loadRoster() {
+      if (!selectedBatch?.id) {
+        setRoster([]);
+        setRosterError("");
+        return;
+      }
+      setRosterLoading(true);
+      setRosterError("");
+      const { data, error: rosterQueryError } = await supabase
+        .from("batch_students")
+        .select("id, batch_id, full_name, block_label, cpa_passed")
+        .eq("batch_id", selectedBatch.id)
+        .order("block_label", { ascending: true })
+        .order("full_name", { ascending: true });
+      if (!active) return;
+      if (rosterQueryError) {
+        console.error("Unable to load public batch roster:", rosterQueryError);
+        setRoster([]);
+        setRosterError("The student roster is currently unavailable. Please check the public read permissions for batch_students.");
+      } else {
+        setRoster(data ?? []);
+      }
+      setRosterLoading(false);
+    }
+    loadRoster();
+    return () => { active = false; };
+  }, [selectedBatch?.id]);
+
+  const rosterBlocks = useMemo(() => {
+    const blocks = ["BSA 4-1", "BSA 4-2", "BSA 4-3"];
+    return blocks.map((block) => {
+      const students = roster.filter((student) => student.block_label === block);
+      return { block, students, count: students.length, passers: students.filter((student) => Boolean(student.cpa_passed)).length };
+    });
+  }, [roster]);
+
+  const filteredRoster = useMemo(() => {
+    const query = rosterSearch.trim().toLowerCase();
+    return roster.filter((student) => {
+      const matchesBlock = rosterBlock === "all" || student.block_label === rosterBlock;
+      const matchesName = !query || (student.full_name ?? "").toLowerCase().includes(query);
+      return matchesBlock && matchesName;
+    });
+  }, [roster, rosterSearch, rosterBlock]);
 
   return (
     <PublicLayout>
@@ -161,6 +214,53 @@ export default function Batches() {
                   )) : <p className="text-sm text-[#68736c]">Batch highlights will be added soon.</p>}
                 </div>
               </div>
+
+              <section className="mt-16 border-t border-[#e3ddcf] pt-14" aria-labelledby="batch-roster-heading">
+                <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#b28b1e]">Official Class Roster</p>
+                    <h2 id="batch-roster-heading" className="mt-2 font-serif text-3xl font-bold md:text-4xl">Meet the Batch</h2>
+                    <p className="mt-3 text-sm leading-6 text-[#68736c]">Student roster grouped by block for BSA Batch {selectedBatch.year}.</p>
+                  </div>
+                  <span className="rounded-full border border-[#ded8c9] bg-white px-4 py-2 text-sm font-bold text-[#315f45]">{roster.length} students</span>
+                </div>
+                <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                  {rosterBlocks.map((group) => (
+                    <article key={group.block} className="rounded-2xl border border-[#ded8c9] bg-white p-5">
+                      <p className="text-xs font-bold uppercase tracking-wide text-[#b28b1e]">{group.block}</p>
+                      <div className="mt-2 flex items-end justify-between gap-3">
+                        <div><p className="font-serif text-3xl font-bold">{group.count}</p><p className="text-xs text-[#68736c]">Students</p></div>
+                        <div className="text-right"><p className="font-serif text-xl font-bold text-[#315f45]">{group.passers}</p><p className="text-xs text-[#68736c]">CPA passers</p></div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+                <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                  <label className="relative flex-1">
+                    <Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#879188]" />
+                    <input value={rosterSearch} onChange={(event) => setRosterSearch(event.target.value)} className="w-full rounded-xl border border-[#d8ddd6] bg-white py-3 pl-10 pr-4 text-sm" placeholder="Search student name" aria-label="Search student name" />
+                  </label>
+                  <select value={rosterBlock} onChange={(event) => setRosterBlock(event.target.value)} className="rounded-xl border border-[#d8ddd6] bg-white px-4 py-3 text-sm" aria-label="Filter roster by block">
+                    <option value="all">All blocks</option><option value="BSA 4-1">BSA 4-1</option><option value="BSA 4-2">BSA 4-2</option><option value="BSA 4-3">BSA 4-3</option>
+                  </select>
+                </div>
+                {rosterLoading ? (
+                  <p className="mt-5 rounded-xl border border-[#ded8c9] bg-white p-8 text-center text-sm text-[#68736c]">Loading batch roster…</p>
+                ) : rosterError ? (
+                  <p role="alert" className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">{rosterError}</p>
+                ) : filteredRoster.length ? (
+                  <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {filteredRoster.map((student) => (
+                      <article key={student.id} className="flex items-center justify-between gap-3 rounded-xl border border-[#ded8c9] bg-white px-5 py-4">
+                        <div className="min-w-0"><h3 className="truncate font-semibold text-[#18392b]">{student.full_name}</h3><p className="mt-1 text-xs text-[#68736c]">{student.block_label}</p></div>
+                        {student.cpa_passed ? <span className="shrink-0 rounded-full bg-[#e8f0e5] px-3 py-1 text-[11px] font-bold text-[#315f45]">CPA Passer</span> : null}
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-5 rounded-xl border border-dashed border-[#ded8c9] bg-white p-8 text-center text-sm text-[#68736c]">{roster.length ? "No students match your search or block filter." : "No student roster entries are available for this batch yet."}</p>
+                )}
+              </section>
 
               <div className="mt-16 border-t border-[#e3ddcf] pt-14">
                 <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
