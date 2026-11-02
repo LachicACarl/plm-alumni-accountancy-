@@ -21,6 +21,7 @@ migration in `supabase/migrations/` in ascending filename order:
 4. `20261031140000_enforce_active_alumni_status.sql`
 5. `20261031150000_enforce_active_alumni_resource_access.sql`
 6. `20261031160000_public_directory_and_batch_content.sql`
+7. `20261102100000_enforce_admin_event_and_image_access.sql`
 
 The admin invitation Edge Function depends on the private provisioning RPC
 created by migration 2. Do not deploy the function until this migration has
@@ -32,6 +33,16 @@ for disposable PostgreSQL databases and must never be run against production.
 Migration 6 adds the batch image URL, public batch read/admin-only write
 policies, and `get_public_alumni()`. The public directory RPC returns only
 active alumni and excludes email, phone, address, and student number.
+
+Migrations 5 and 7 create policies on Supabase-managed `storage.objects`.
+They must be executed by the database owner (the Supabase SQL Editor's
+`postgres` role or an equivalent owner role). A lower-privilege migration
+connection can fail with `must be owner of table objects`; do not work around
+that error by changing ownership or disabling RLS. If a migration fails,
+confirm it is absent from the migration history, then have the project owner
+review and run the complete migration script in order. Migration 7 keeps
+events and event/batch images publicly readable and limits their writes to
+administrators. It does not create or change Storage buckets.
 
 ## Administrator-created alumni invitations
 

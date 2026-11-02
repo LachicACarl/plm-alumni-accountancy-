@@ -15,54 +15,123 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import DashboardSidebar from "../components/DashboardSidebar";
 
-const stats = [
-  { label: "Profile Status", value: "Complete", description: "Your profile is up to date", icon: UserRound, tone: "green" },
-  { label: "Credentials", value: "3", description: "Verified credentials", icon: FileCheck2, tone: "gold" },
-  { label: "Achievements", value: "5", description: "Milestones recorded", icon: Award, tone: "green" },
-  { label: "Events", value: "2", description: "Upcoming events", icon: CalendarDays, tone: "gold" },
-];
+function formatActivityDate(value) {
+  if (!value) return "Date unavailable";
 
-const events = [
-  { month: "JUN", day: "20", title: "BSA Alumni General Assembly" },
-  { month: "JUL", day: "12", title: "Alumni Career Networking" },
-];
+  return new Date(value).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
-const activities = [
-  { title: "Profile information updated", date: "June 5, 2026", icon: UserRound },
-  { title: "Credential submitted for verification", date: "May 28, 2026", icon: FileCheck2 },
-  { title: "Achievement added to your profile", date: "May 20, 2026", icon: Award },
-];
+function getEventDateParts(value) {
+  if (!value) return { month: "TBA", day: "—" };
+
+  const date = new Date(`${value}T00:00:00`);
+  return {
+    month: date.toLocaleDateString("en-US", { month: "short" }).toUpperCase(),
+    day: date.toLocaleDateString("en-US", { day: "2-digit" }),
+  };
+}
 
 export default function Dashboard() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profile, setProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [summary, setSummary] = useState({
+    credentials: [],
+    achievements: [],
+    events: [],
+    activities: [],
+  });
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [summaryError, setSummaryError] = useState("");
 
   useEffect(() => {
     async function loadProfile() {
       try {
         const {
           data: { user },
+          error: authError,
         } = await supabase.auth.getUser();
+
+        if (authError) throw authError;
 
         if (!user) {
           setProfileLoading(false);
+          setSummaryLoading(false);
           return;
         }
 
-        const { data, error } = await supabase
+        const { data, error: profileError } = await supabase
           .from("profiles")
-          .select("first_name, middle_name, last_name, graduation_year, profession, company, role")
+          .select("first_name, middle_name, last_name, student_number, graduation_year, profession, company, role, account_status, created_at, updated_at")
           .eq("id", user.id)
           .single();
 
-        if (error) throw error;
+        if (profileError) throw profileError;
 
         setProfile(data);
+
+        const today = new Date().toLocaleDateString("en-CA");
+        const [credentialsResult, achievementsResult, eventsResult] =
+          await Promise.all([
+            supabase
+              .from("credentials")
+              .select("credential_type, status, created_at")
+              .eq("profile_id", user.id)
+              .order("created_at", { ascending: false }),
+            supabase
+              .from("achievements")
+              .select("title, created_at")
+              .eq("profile_id", user.id)
+              .order("created_at", { ascending: false }),
+            supabase
+              .from("events")
+              .select("id, title, event_date")
+              .gte("event_date", today)
+              .order("event_date", { ascending: true })
+              .limit(10),
+          ]);
+
+        const queryError =
+          credentialsResult.error || achievementsResult.error || eventsResult.error;
+        if (queryError) throw queryError;
+
+        const credentials = credentialsResult.data ?? [];
+        const achievements = achievementsResult.data ?? [];
+        const events = eventsResult.data ?? [];
+        const activities = [
+          ...credentials.map((credential) => ({
+            title: `${credential.credential_type} credential submitted`,
+            date: credential.created_at,
+            icon: FileCheck2,
+          })),
+          ...achievements.map((achievement) => ({
+            title: `Achievement added: ${achievement.title}`,
+            date: achievement.created_at,
+            icon: Award,
+          })),
+          ...(data.updated_at && data.updated_at !== data.created_at
+            ? [{
+                title: "Profile information updated",
+                date: data.updated_at,
+                icon: UserRound,
+              }]
+            : []),
+        ]
+          .filter((activity) => activity.date)
+          .sort((a, b) => new Date(b.date) - new Date(a.date))
+          .slice(0, 3);
+
+        setSummary({ credentials, achievements, events, activities });
       } catch (error) {
         console.error("Unable to load alumni profile:", error);
+        setSummaryError("Unable to load your account summary. Please try again later.");
       } finally {
         setProfileLoading(false);
+        setSummaryLoading(false);
       }
     }
 
@@ -80,6 +149,12 @@ export default function Dashboard() {
     : "BSA Alumni";
 
   const profession = profile?.profession || "BSA Alumni";
+  const profileComplete = Boolean(
+    profile?.first_name &&
+      profile?.last_name &&
+      profile?.student_number &&
+      profile?.graduation_year
+  );
 
   return (
     <div className="min-h-screen bg-[#f7f5ee] text-[#18392b] lg:flex">
@@ -182,7 +257,11 @@ export default function Dashboard() {
                   <span className="text-xs text-white/50">Member status</span>
                   <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#d4af37]">
                     <CheckCircle2 size={13} />
-                    Active
+                    {profile
+                      ? profile.account_status === "inactive"
+                        ? "Inactive"
+                        : "Active"
+                      : "—"}
                   </span>
                 </div>
               </div>
@@ -190,7 +269,46 @@ export default function Dashboard() {
           </section>
 
           <section className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {stats.map((stat) => {
+            {[
+              {
+                label: "Account Status",
+                value: profileLoading
+                  ? "…"
+                  : profile?.account_status === "inactive"
+                    ? "Inactive"
+                    : profile
+                      ? "Active"
+                      : "—",
+                description: "Alumni account",
+                icon: UserRound,
+                tone: "green",
+              },
+              {
+                label: "Credentials",
+                value: summaryLoading
+                  ? "…"
+                  : summaryError
+                    ? "—"
+                    : summary.credentials.filter((item) => item.status === "verified").length,
+                description: summaryError ? "Unavailable" : `${summary.credentials.length} submitted`,
+                icon: FileCheck2,
+                tone: "gold",
+              },
+              {
+                label: "Achievements",
+                value: summaryLoading ? "…" : summaryError ? "—" : summary.achievements.length,
+                description: "Recorded on your profile",
+                icon: Award,
+                tone: "green",
+              },
+              {
+                label: "Events",
+                value: summaryLoading ? "…" : summaryError ? "—" : summary.events.length,
+                description: "Upcoming events",
+                icon: CalendarDays,
+                tone: "gold",
+              },
+            ].map((stat) => {
               const Icon = stat.icon;
               const gold = stat.tone === "gold";
 
@@ -248,7 +366,7 @@ export default function Dashboard() {
                   <div>
                     <h4 className="font-serif text-lg font-bold">{profileLoading ? "Loading..." : fullName}</h4>
                     <p className="mt-0.5 text-xs text-gray-500">
-                      Bachelor of Science in Accountancy � Batch 2025
+                      Bachelor of Science in Accountancy · {profile?.graduation_year ? `Class of ${profile.graduation_year}` : "Class year not set"}
                     </p>
                     <p className="mt-1 text-xs font-semibold text-[#18392b]/75">
                       {profession}
@@ -257,7 +375,7 @@ export default function Dashboard() {
 
                   <span className="sm:ml-auto inline-flex w-fit items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-[10px] font-bold text-green-700">
                     <CheckCircle2 size={11} />
-                    Complete
+                    {profileLoading ? "Loading" : profileComplete ? "Complete" : "Incomplete"}
                   </span>
                 </div>
               </div>
@@ -327,17 +445,34 @@ export default function Dashboard() {
               </div>
 
               <div className="mt-4 space-y-2.5">
-                {events.map((event) => (
-                  <div key={event.title} className="flex gap-3 rounded-xl border border-[#eee9dc] bg-[#fbfaf6] p-3.5">
-                    <div className="flex h-14 w-12 shrink-0 flex-col items-center justify-center rounded-lg bg-[#18392b] text-white">
-                      <span className="text-[9px] font-bold tracking-wider text-[#d4af37]">{event.month}</span>
-                      <span className="font-serif text-lg font-bold">{event.day}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <h4 className="text-sm font-semibold">{event.title}</h4>
-                    </div>
-                  </div>
-                ))}
+                {summaryError ? (
+                  <p role="alert" className="rounded-xl bg-red-50 p-3.5 text-sm text-red-700">
+                    {summaryError}
+                  </p>
+                ) : summaryLoading ? (
+                  <p className="rounded-xl border border-[#eee9dc] bg-[#fbfaf6] p-3.5 text-sm text-gray-500">
+                    Loading upcoming events...
+                  </p>
+                ) : summary.events.length === 0 ? (
+                  <p className="rounded-xl border border-[#eee9dc] bg-[#fbfaf6] p-3.5 text-sm text-gray-500">
+                    No upcoming events are scheduled.
+                  </p>
+                ) : (
+                  summary.events.slice(0, 2).map((event) => {
+                    const { month, day } = getEventDateParts(event.event_date);
+                    return (
+                      <div key={event.id} className="flex gap-3 rounded-xl border border-[#eee9dc] bg-[#fbfaf6] p-3.5">
+                        <div className="flex h-14 w-12 shrink-0 flex-col items-center justify-center rounded-lg bg-[#18392b] text-white">
+                          <span className="text-[9px] font-bold tracking-wider text-[#d4af37]">{month}</span>
+                          <span className="font-serif text-lg font-bold">{day}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <h4 className="text-sm font-semibold">{event.title}</h4>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
 
@@ -350,7 +485,15 @@ export default function Dashboard() {
               </div>
 
               <div className="mt-3 divide-y divide-[#eee9dc]">
-                {activities.map((activity) => {
+                {summaryError ? (
+                  <p role="alert" className="py-3 text-sm text-red-700">
+                    {summaryError}
+                  </p>
+                ) : summaryLoading ? (
+                  <p className="py-3 text-sm text-gray-500">Loading account activity...</p>
+                ) : summary.activities.length === 0 ? (
+                  <p className="py-3 text-sm text-gray-500">No recent account activity.</p>
+                ) : summary.activities.map((activity) => {
                   const Icon = activity.icon;
 
                   return (
@@ -361,7 +504,7 @@ export default function Dashboard() {
 
                       <div>
                         <p className="text-xs font-semibold">{activity.title}</p>
-                        <p className="mt-0.5 text-[10px] text-gray-400">{activity.date}</p>
+                        <p className="mt-0.5 text-[10px] text-gray-400">{formatActivityDate(activity.date)}</p>
                       </div>
                     </div>
                   );
