@@ -1,0 +1,63 @@
+# Render Blueprint for the existing PLM BSA Alumni static site.
+# Exact paths are rewritten to index.html; unlisted paths retain normal 404s.
+services:
+  - type: web
+    name: plm-alumni-accountancy-
+    runtime: static
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /admin/login
+        destination: /index.html
+      - type: rewrite
+        source: /admin
+        destination: /index.html
+      - type: rewrite
+        source: /admin/homepage
+        destination: /index.html
+      - type: rewrite
+        source: /admin/alumni
+        destination: /index.html
+      - type: rewrite
+        source: /admin/events
+        destination: /index.html
+      - type: rewrite
+        source: /admin/batches
+        destination: /index.html
+      - type: rewrite
+        source: /admin/credentials
+        destination: /index.html
+      - type: rewrite
+        source: /login
+        destination: /index.html
+      - type: rewrite
+        source: /reset-password
+        destination: /index.html
+      - type: rewrite
+        source: /alumni
+        destination: /index.html
+      - type: rewrite
+        source: /events
+        destination: /index.html
+      - type: rewrite
+        source: /batches
+        destination: /index.html
+      - type: rewrite
+        source: /dashboard
+        destination: /index.html
+      - type: rewrite
+        source: /dashboard/profile
+        destination: /index.html
+      - type: rewrite
+        source: /dashboard/credentials
+        destination: /index.html
+      - type: rewrite
+        source: /dashboard/achievements
+        destination: /index.html
+      - type: rewrite
+        source: /dashboard/batch
+        destination: /index.html
+      - type: rewrite
+        source: /dashboard/events
+        destination: /index.html
