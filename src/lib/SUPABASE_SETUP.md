@@ -23,6 +23,7 @@ migration in `supabase/migrations/` in ascending filename order:
 6. `20261031160000_public_directory_and_batch_content.sql`
 7. `20261102100000_enforce_admin_event_and_image_access.sql`
 8. `20261103120000_harden_is_admin_function.sql`
+9. `20261103130000_add_homepage_content_publishing_state.sql`
 
 The admin invitation Edge Function depends on the private provisioning RPC
 created by migration 2. Do not deploy the function until this migration has
@@ -50,6 +51,9 @@ the two public-page image buckets public. Neither migration creates a bucket.
 Review bucket contents and access expectations before applying these settings.
 Migration 8 restricts `public.is_admin()` execution to authenticated users;
 the owner must verify its live definition and grants before marking it applied.
+Migration 9 adds an administrator-controlled publish state while preserving
+the current public homepage by default. Public RLS reads only published
+content; administrators can still read and republish it after unpublishing.
 
 ## Administrator-created alumni invitations
 

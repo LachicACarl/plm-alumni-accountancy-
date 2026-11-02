@@ -8,7 +8,7 @@ migrations.
 
 ## Repository migration order versus live migration history
 
-The repository contains eight intended migrations, but their filenames are
+The repository contains nine intended migrations, but their filenames are
 not a guarantee that the production migration ledger uses the same timestamps.
 The live project currently reports these five recorded versions:
 
@@ -35,6 +35,7 @@ Repository migrations relevant to release:
 6. `20261031160000_public_directory_and_batch_content.sql`
 7. `20261102100000_enforce_admin_event_and_image_access.sql`
 8. `20261103120000_harden_is_admin_function.sql`
+9. `20261103130000_add_homepage_content_publishing_state.sql`
 
 Live inspection found that the following objects from repository migration 5
 are currently missing: `public.list_active_batch_members(integer)` and
@@ -64,6 +65,12 @@ resolve the missing migration 5 functions or the Storage-policy mismatch; the
 owner must reconcile and test it with the rest of the live migration history.
 The recorded live-ledger snapshot above has no row for migration 8's filename
 timestamp, so its production application status remains unverified.
+
+Migration 9 adds `homepage_content.is_published` with a `true` default so
+existing homepage content stays public. It limits public reads to published
+content while allowing admins to read, publish, and unpublish the saved row.
+It depends on migration 3's table and `public.is_homepage_admin()` function.
+Its production application status is unverified.
 
 The production migration ledger and actual schema differ from the repository's
 expected sequence. The owner must reconcile those differences against exact SQL
@@ -129,8 +136,10 @@ and [CLI migration repair reference](https://supabase.com/docs/reference/cli/sup
    - all required tables and columns are present;
    - `profiles`, `credentials`, `achievements`, `batches`, `events`,
      `homepage_content`, and `storage.objects` have RLS enabled;
-  - `alumni-credentials` is private while `event-images` and `batch-images`
-    are public, and anon cannot read credential objects;
+   - `alumni-credentials` is private while `event-images` and `batch-images`
+     are public, and anon cannot read credential objects;
+   - homepage public reads are limited to `is_published = true`, while admins
+     can still read an unpublished row;
    - the public alumni RPC returns only its approved columns;
    - admin write policies are restricted to admin/head-admin roles;
    - `public.is_admin()` is present, `SECURITY DEFINER`, `STABLE`, has a pinned

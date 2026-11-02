@@ -52,4 +52,71 @@ begin
   if title_value <> 'RLS TEST PASSED' then raise exception 'Admin update was not persisted'; end if;
 end $$;
 
-\echo 'Homepage content migration and RLS tests passed.'
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', false);
+do $$
+declare affected integer;
+begin
+  update public.homepage_content set is_published = false where id = 'main';
+  get diagnostics affected = row_count;
+  if affected <> 0 then raise exception 'Non-admin user unexpectedly unpublished the homepage'; end if;
+end $$;
+reset role;
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', false);
+do $$
+declare affected integer;
+begin
+  update public.homepage_content set is_published = false where id = 'main';
+  get diagnostics affected = row_count;
+  if affected <> 1 then raise exception 'Admin should unpublish exactly one homepage row, got %', affected; end if;
+end $$;
+reset role;
+
+set role anon;
+do $$
+declare visible_rows integer;
+begin
+  select count(*) into visible_rows from public.homepage_content where id = 'main';
+  if visible_rows <> 0 then raise exception 'Anonymous visitor must not read unpublished homepage content'; end if;
+end $$;
+reset role;
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', false);
+do $$
+declare visible_rows integer;
+begin
+  select count(*) into visible_rows from public.homepage_content where id = 'main';
+  if visible_rows <> 0 then raise exception 'Alumni must not read unpublished homepage content'; end if;
+end $$;
+reset role;
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', false);
+do $$
+declare visible_rows integer;
+begin
+  select count(*) into visible_rows from public.homepage_content where id = 'main';
+  if visible_rows <> 1 then raise exception 'Admin must retain access to unpublished homepage content'; end if;
+end $$;
+do $$
+declare affected integer;
+begin
+  update public.homepage_content set is_published = true where id = 'main';
+  get diagnostics affected = row_count;
+  if affected <> 1 then raise exception 'Admin should republish exactly one homepage row, got %', affected; end if;
+end $$;
+reset role;
+
+set role anon;
+do $$
+declare visible_rows integer;
+begin
+  select count(*) into visible_rows from public.homepage_content where id = 'main';
+  if visible_rows <> 1 then raise exception 'Anonymous visitor should read republished homepage content'; end if;
+end $$;
+reset role;
+
+\echo 'Homepage content publishing and RLS tests passed.'

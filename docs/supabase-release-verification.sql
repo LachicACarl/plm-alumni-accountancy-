@@ -23,7 +23,8 @@ with required_migrations(version, migration_name) as (
     ('20261031150000', 'enforce_active_alumni_resource_access'),
     ('20261031160000', 'public_directory_and_batch_content'),
     ('20261102100000', 'enforce_admin_event_and_image_access'),
-    ('20261103120000', 'harden_is_admin_function')
+    ('20261103120000', 'harden_is_admin_function'),
+    ('20261103130000', 'add_homepage_content_publishing_state')
 )
 select migration_name, version as expected_version
 from required_migrations
@@ -65,6 +66,7 @@ with required_columns(table_schema, table_name, column_name) as (
     ('public', 'events', 'created_at'),
     ('public', 'homepage_content', 'id'),
     ('public', 'homepage_content', 'content'),
+    ('public', 'homepage_content', 'is_published'),
     ('public', 'homepage_content', 'updated_at'),
     ('public', 'homepage_content', 'updated_by'),
     ('public', 'audit_logs', 'id'),
