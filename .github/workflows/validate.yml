@@ -184,6 +184,32 @@ jobs:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -d event_access_test -v ON_ERROR_STOP=1 -f supabase/tests/event_and_image_access.sql
 
+
+  admin-function-security:
+    name: Admin function execution grants (disposable PostgreSQL)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: admin_function_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d admin_function_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Verify anonymous execution is revoked and admin predicate works
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d admin_function_test -v ON_ERROR_STOP=1 -f supabase/tests/is_admin_function_security.sql
+
   alumni-status-rls:
     name: Active alumni status RLS (disposable PostgreSQL)
     runs-on: ubuntu-latest
