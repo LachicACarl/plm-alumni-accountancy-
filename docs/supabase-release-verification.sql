@@ -4,49 +4,13 @@
 
 begin transaction read only;
 
--- Migration ledger: reports recorded versions without assuming the optional
--- schema_migrations table exists in every project setup.
-do $check_migration_history$
-declare
-  applied_versions text;
-  expected_version text;
-  is_applied boolean;
-begin
-  if to_regclass('supabase_migrations.schema_migrations') is null then
-    raise notice 'Migration ledger supabase_migrations.schema_migrations is not available.';
-    return;
-  end if;
-
-  if not exists (
-    select 1
-    from information_schema.columns
-    where table_schema = 'supabase_migrations'
-      and table_name = 'schema_migrations'
-      and column_name = 'version'
-  ) then
-    raise notice 'Migration ledger has no version column; inspect it using the project migration tooling.';
-    return;
-  end if;
-
-  execute 'select string_agg(version::text, '', '' order by version::text) from supabase_migrations.schema_migrations'
-    into applied_versions;
-  raise notice 'Recorded migration versions: %', coalesce(applied_versions, '(none)');
-
-  foreach expected_version in array array[
-    '20261030090000',
-    '20261031120000',
-    '20261031130000',
-    '20261031140000',
-    '20261031150000',
-    '20261031160000',
-    '20261102100000'
-  ] loop
-    execute 'select exists (select 1 from supabase_migrations.schema_migrations where version::text = $1)'
-      into is_applied using expected_version;
-    raise notice 'Migration % applied: %', expected_version, is_applied;
-  end loop;
-end;
-$check_migration_history$;
+-- Migration ledger: report the exact live versions and names.
+-- Compare these with the repository migration filenames and runbook. The
+-- project has previously used different timestamps for similarly named
+-- migrations, so do not infer equivalence from sequence or name alone.
+select version, name
+from supabase_migrations.schema_migrations
+order by version;
 
 -- Required application objects, including migrations whose status must be
 -- compared with the ledger notice above.
@@ -230,8 +194,11 @@ select
 from resolved
 order by signature;
 
--- Administrator helpers must be SECURITY DEFINER and executable only by the
--- authenticated application role, not anon. This does not reveal passwords.
+-- SECURITY DEFINER inventory for manual review. Do not treat every advisor
+-- finding as automatically wrong: get_public_alumni() is intentionally used
+-- by the public directory and returns only approved active-alumni fields.
+-- Review each function body, caller contract, ACL, and owner before changing
+-- grants or SECURITY DEFINER/INVOKER.
 select
   procedure.oid::regprocedure as function_signature,
   procedure.prosecdef as security_definer,
