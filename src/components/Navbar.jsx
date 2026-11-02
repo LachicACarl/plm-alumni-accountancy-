@@ -2,7 +2,7 @@
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 
-import plmLogo from "../assets/plm-accountancy-logo.svg.png";
+import plmLogo from "../../assets/plm-accountancy-logo.svg.png";
 
 export default function Navbar() {
   const location = useLocation();
