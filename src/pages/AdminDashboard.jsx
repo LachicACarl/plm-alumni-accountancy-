@@ -11,16 +11,20 @@ import {
   Database,
   ExternalLink,
   LogOut,
+  PanelsTopLeft,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
     alumni: 0,
+    activeAlumni: 0,
+    inactiveAlumni: 0,
     batches: 0,
     pendingCredentials: 0,
     activeEvents: 0,
   });
+  const [recentActivities, setRecentActivities] = useState([]);
 
   const [adminName, setAdminName] = useState("Admin User");
   const [loading, setLoading] = useState(true);
@@ -64,14 +68,31 @@ export default function AdminDashboard() {
 
         const [
           alumniResult,
+          activeAlumniResult,
+          inactiveAlumniResult,
           batchesResult,
           credentialsResult,
           eventsResult,
+          recentAlumniResult,
+          recentCredentialsResult,
+          recentEventsResult,
         ] = await Promise.all([
           supabase
             .from("profiles")
             .select("id", { count: "exact", head: true })
             .eq("role", "alumni"),
+
+          supabase
+            .from("profiles")
+            .select("id", { count: "exact", head: true })
+            .eq("role", "alumni")
+            .eq("account_status", "active"),
+
+          supabase
+            .from("profiles")
+            .select("id", { count: "exact", head: true })
+            .eq("role", "alumni")
+            .eq("account_status", "inactive"),
 
           supabase
             .from("batches")
@@ -86,23 +107,74 @@ export default function AdminDashboard() {
             .from("events")
             .select("id", { count: "exact", head: true })
             .gte("event_date", today),
+
+          supabase
+            .from("profiles")
+            .select("id, first_name, last_name, created_at")
+            .eq("role", "alumni")
+            .order("created_at", { ascending: false })
+            .limit(5),
+
+          supabase
+            .from("credentials")
+            .select("id, credential_type, status, created_at")
+            .order("created_at", { ascending: false })
+            .limit(5),
+
+          supabase
+            .from("events")
+            .select("id, title, created_at")
+            .order("created_at", { ascending: false })
+            .limit(5),
         ]);
 
         const firstError =
           alumniResult.error ||
+          activeAlumniResult.error ||
+          inactiveAlumniResult.error ||
           batchesResult.error ||
           credentialsResult.error ||
-          eventsResult.error;
+          eventsResult.error ||
+          recentAlumniResult.error ||
+          recentCredentialsResult.error ||
+          recentEventsResult.error;
 
         if (firstError) throw firstError;
 
         if (mounted) {
           setStats({
             alumni: alumniResult.count ?? 0,
+            activeAlumni: activeAlumniResult.count ?? 0,
+            inactiveAlumni: inactiveAlumniResult.count ?? 0,
             batches: batchesResult.count ?? 0,
             pendingCredentials: credentialsResult.count ?? 0,
             activeEvents: eventsResult.count ?? 0,
           });
+
+          const activities = [
+            ...(recentAlumniResult.data ?? []).map((alumni) => ({
+              id: `alumni-${alumni.id}`,
+              title: `${[alumni.first_name, alumni.last_name].filter(Boolean).join(" ")} registered`,
+              date: alumni.created_at,
+              icon: Users,
+            })),
+            ...(recentCredentialsResult.data ?? []).map((credential) => ({
+              id: `credential-${credential.id}`,
+              title: `${credential.credential_type} credential ${credential.status}`,
+              date: credential.created_at,
+              icon: FileCheck2,
+            })),
+            ...(recentEventsResult.data ?? []).map((event) => ({
+              id: `event-${event.id}`,
+              title: `Event created: ${event.title}`,
+              date: event.created_at,
+              icon: CalendarDays,
+            })),
+          ]
+            .filter((activity) => activity.date)
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .slice(0, 6);
+          setRecentActivities(activities);
         }
       } catch (err) {
         console.error("Admin dashboard error:", err);
@@ -147,9 +219,16 @@ export default function AdminDashboard() {
 
   const managementCards = [
     {
+      title: "Homepage Content",
+      description: "Edit the public homepage hero, featured content, spotlight, images, and footer.",
+      count: "Edit",
+      label: "Website Content",
+      icon: PanelsTopLeft,
+      path: "/admin/homepage",
+    },
+    {
       title: "Alumni Management",
-      description:
-        "Search, review, and manage registered BSA alumni records.",
+      description: "Search, review, and manage registered BSA alumni records.",
       count: stats.alumni,
       label: "Alumni Records",
       icon: Users,
@@ -157,12 +236,27 @@ export default function AdminDashboard() {
     },
     {
       title: "Credential Verification",
-      description:
-        "Review and verify credentials submitted by alumni.",
+      description: "Review and verify credentials submitted by alumni.",
       count: stats.pendingCredentials,
       label: "Pending Reviews",
       icon: FileCheck2,
       path: "/admin/credentials",
+    },
+    {
+      title: "Event Management",
+      description: "Create, update, and organize alumni events.",
+      count: stats.activeEvents,
+      label: "Upcoming Events",
+      icon: CalendarDays,
+      path: "/admin/events",
+    },
+    {
+      title: "Batch Management",
+      description: "Maintain graduation batches and alumni year groups.",
+      count: stats.batches,
+      label: "Batches",
+      icon: GraduationCap,
+      path: "/admin/batches",
     },
   ];
 
@@ -171,6 +265,18 @@ export default function AdminDashboard() {
       label: "Total Alumni",
       value: stats.alumni,
       description: "Registered members",
+      icon: Users,
+    },
+    {
+      label: "Active Alumni",
+      value: stats.activeAlumni,
+      description: "Active accounts",
+      icon: Users,
+    },
+    {
+      label: "Inactive Alumni",
+      value: stats.inactiveAlumni,
+      description: "Inactive accounts",
       icon: Users,
     },
     {
@@ -299,7 +405,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           {statistics.map((stat) => {
             const Icon = stat.icon;
 
@@ -315,7 +421,7 @@ export default function AdminDashboard() {
                     </p>
 
                     <p className="mt-2 font-serif text-3xl font-bold text-[#18392b]">
-                      {loading ? "..." : stat.value}
+                      {loading ? "..." : error ? "—" : stat.value}
                     </p>
 
                     <p className="mt-1 text-xs text-gray-500">
@@ -330,6 +436,44 @@ export default function AdminDashboard() {
               </div>
             );
           })}
+        </section>
+
+        <section className="mt-8 rounded-2xl border border-[#ddd7c8] bg-white p-6 shadow-sm">
+          <div className="mb-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#b28b1e]">
+              Activity
+            </p>
+            <h2 className="mt-1 font-serif text-2xl font-bold">Recent Activity</h2>
+          </div>
+
+          {loading ? (
+            <p className="py-3 text-sm text-gray-500">Loading recent activity...</p>
+          ) : recentActivities.length === 0 ? (
+            <p className="py-3 text-sm text-gray-500">No recent alumni, credential, or event activity.</p>
+          ) : (
+            <ul className="divide-y divide-[#eee9dc]">
+              {recentActivities.map((activity) => {
+                const Icon = activity.icon;
+                return (
+                  <li key={activity.id} className="flex items-center gap-3 py-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f8f6ef] text-[#18392b]">
+                      <Icon size={16} />
+                    </span>
+                    <span className="min-w-0 flex-1 text-sm font-medium text-[#18392b]">
+                      {activity.title}
+                    </span>
+                    <time className="shrink-0 text-xs text-gray-400">
+                      {new Date(activity.date).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </time>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </section>
 
         <section className="mt-10">
@@ -384,7 +528,7 @@ export default function AdminDashboard() {
                     <div className="mt-6 flex items-end justify-between border-t border-[#eee9df] pt-5">
                       <div>
                         <p className="font-serif text-2xl font-bold text-[#18392b]">
-                          {loading ? "..." : card.count}
+                          {loading ? "..." : error ? "—" : card.count}
                         </p>
 
                         <p className="mt-0.5 text-xs text-gray-400">
@@ -427,7 +571,7 @@ export default function AdminDashboard() {
                   </p>
 
                   <p className="mt-1 text-sm font-bold text-[#286044]">
-                    Operational
+                    Check live service status
                   </p>
                 </div>
               </div>
@@ -463,7 +607,7 @@ export default function AdminDashboard() {
                   </p>
 
                   <p className="mt-1 text-sm font-bold text-[#18392b]">
-                    RLS Protected
+                    Verify database policies
                   </p>
                 </div>
               </div>

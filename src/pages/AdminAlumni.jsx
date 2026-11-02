@@ -24,6 +24,7 @@ export default function AdminAlumni() {
   const [error, setError] = useState("");
   const [selectedAlumni, setSelectedAlumni] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [updatingStatusId, setUpdatingStatusId] = useState(null);
 
   useEffect(() => {
     async function loadAlumni() {
@@ -33,7 +34,7 @@ export default function AdminAlumni() {
       const { data, error: alumniError } = await supabase
         .from("profiles")
         .select(
-          "id, student_number, first_name, middle_name, last_name, email, graduation_year, profession, company, role, created_at"
+          "id, student_number, first_name, middle_name, last_name, email, graduation_year, profession, company, role, account_status, created_at"
         )
         .eq("role", "alumni")
         .order("last_name", { ascending: true });
@@ -50,21 +51,21 @@ export default function AdminAlumni() {
         name: [alumni.first_name, alumni.middle_name, alumni.last_name]
           .filter(Boolean)
           .join(" "),
-        studentNumber: alumni.student_number || "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â",
+        studentNumber: alumni.student_number || "—",
         batch: alumni.graduation_year
           ? String(alumni.graduation_year)
-          : "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â",
+          : "—",
         profession: alumni.profession || "Not specified",
         company: alumni.company || "Not specified",
         email: alumni.email || "",
-        status: "Active",
+        status: alumni.account_status === "inactive" ? "Inactive" : "Active",
       }));
 
       const years = [
         ...new Set(
           formatted
             .map((alumni) => alumni.batch)
-            .filter((year) => year !== "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â")
+            .filter((year) => year !== "—")
         ),
       ].sort((a, b) => Number(b) - Number(a));
 
@@ -105,6 +106,40 @@ export default function AdminAlumni() {
   const inactiveCount = alumniData.filter(
     (alumni) => alumni.status === "Inactive"
   ).length;
+
+  async function handleStatusToggle(alumni) {
+    if (updatingStatusId) return;
+
+    const nextStatus = alumni.status === "Active" ? "inactive" : "active";
+    setUpdatingStatusId(alumni.id);
+    setError("");
+
+    const { error: updateError } = await supabase.rpc("set_alumni_account_status", {
+      p_alumni_id: alumni.id,
+      p_account_status: nextStatus,
+    });
+
+    if (updateError) {
+      setError(`Unable to update ${alumni.name}'s status: ${updateError.message}`);
+      setUpdatingStatusId(null);
+      return;
+    }
+
+    const displayStatus = nextStatus === "active" ? "Active" : "Inactive";
+    setAlumniData((current) =>
+      current.map((record) =>
+        record.id === alumni.id
+          ? { ...record, status: displayStatus }
+          : record
+      )
+    );
+    setSelectedAlumni((current) =>
+      current?.id === alumni.id
+        ? { ...current, status: displayStatus }
+        : current
+    );
+    setUpdatingStatusId(null);
+  }
 
   const getInitials = (name) =>
     name
@@ -200,7 +235,7 @@ export default function AdminAlumni() {
                 </p>
 
                 <p className="mt-1 font-serif text-2xl font-bold">
-                  {loading ? "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â" : alumniData.length}
+                  {loading ? "—" : alumniData.length}
                 </p>
               </div>
             </div>
@@ -218,7 +253,7 @@ export default function AdminAlumni() {
                 </p>
 
                 <p className="mt-1 font-serif text-2xl font-bold">
-                  {loading ? "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â" : activeCount}
+                  {loading ? "—" : activeCount}
                 </p>
               </div>
             </div>
@@ -236,7 +271,7 @@ export default function AdminAlumni() {
                 </p>
 
                 <p className="mt-1 font-serif text-2xl font-bold">
-                  {loading ? "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â" : inactiveCount}
+                  {loading ? "—" : inactiveCount}
                 </p>
               </div>
             </div>
@@ -312,8 +347,8 @@ export default function AdminAlumni() {
               </h2>
 
               <p className="mt-1 text-xs text-gray-500">
-                Showing {loading ? "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â" : filteredAlumni.length} of{" "}
-                {loading ? "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â" : alumniData.length} records
+                Showing {loading ? "—" : filteredAlumni.length} of{" "}
+                {loading ? "—" : alumniData.length} records
               </p>
             </div>
 
@@ -376,7 +411,7 @@ export default function AdminAlumni() {
 
                       <td className="px-5 py-4">
                         <span className="inline-flex rounded-full bg-[#fff7df] px-3 py-1 text-xs font-bold text-[#806612]">
-                          {alumni.batch === "ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â"
+                          {alumni.batch === "—"
                             ? "Batch not set"
                             : "BSA " + alumni.batch}
                         </span>
@@ -464,7 +499,7 @@ export default function AdminAlumni() {
                     </h2>
 
                     <p className="mt-1 text-sm text-white/60">
-                      Create a new alumni profile record.
+                      Send a secure sign-in invitation and create the matching alumni profile.
                     </p>
                   </div>
 
@@ -488,12 +523,11 @@ export default function AdminAlumni() {
 
                   const payload = {
                     email: String(formData.get("email") || "").trim(),
-                    password: String(formData.get("password") || ""),
                     first_name: String(formData.get("first_name") || "").trim(),
-                    middle_name: "",
+                    middle_name: String(formData.get("middle_name") || "").trim(),
                     last_name: String(formData.get("last_name") || "").trim(),
                     student_number: String(formData.get("student_number") || "").trim(),
-                    graduation_year: Number(formData.get("graduation_year") || 0),
+                    graduation_year: Number(formData.get("graduation_year") || 0) || null,
                     profession: String(formData.get("profession") || "").trim(),
                     company: String(formData.get("company") || "").trim(),
                   };
@@ -525,7 +559,7 @@ export default function AdminAlumni() {
                       );
                     }
 
-                    alert("Alumni account created successfully.");
+                    alert("Invitation sent successfully. The alumnus can use the email link to set their password.");
                     form.reset();
                     setShowAddModal(false);
                     window.location.reload();
@@ -601,20 +635,6 @@ export default function AdminAlumni() {
                     />
                   </div>
 
-                  <div className="sm:col-span-2">
-                    <label className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
-                      Temporary Password
-                    </label>
-                    <input
-                      type="password"
-                      name="password"
-                      placeholder="Minimum 8 characters"
-                      minLength={8}
-                      required
-                      className="w-full rounded-xl border border-[#d8d2c2] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#18392b] focus:ring-2 focus:ring-[#18392b]/10"
-                    />
-                  </div>
-
                   <div>
                     <label className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
                       Profession
@@ -646,9 +666,7 @@ export default function AdminAlumni() {
                   </p>
 
                   <p className="mt-1 text-xs leading-5 text-gray-500">
-                    The alumni login account will be connected through
-                    Supabase Authentication in the next step. This form
-                    currently prepares the profile information only.
+                    This sends a one-time invitation email. The alumnus sets their own password through the secure invitation link.
                   </p>
                 </div>
 
@@ -778,6 +796,18 @@ export default function AdminAlumni() {
                   This information is loaded from the alumni profile stored in
                   the PLM Alumni System database.
                 </p>
+                <button
+                  type="button"
+                  onClick={() => handleStatusToggle(selectedAlumni)}
+                  disabled={updatingStatusId === selectedAlumni.id}
+                  className="mt-4 rounded-xl border border-[#d8d2c2] px-4 py-2.5 text-sm font-bold text-[#18392b] transition hover:bg-[#f7f5ee] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {updatingStatusId === selectedAlumni.id
+                    ? "Updating..."
+                    : selectedAlumni.status === "Active"
+                      ? "Mark as Inactive"
+                      : "Mark as Active"}
+                </button>
               </div>
             </div>
           </div>
@@ -785,7 +815,7 @@ export default function AdminAlumni() {
         <footer className="mt-10 border-t border-[#ddd7c8] py-6">
           <div className="flex flex-col gap-2 text-xs text-gray-400 sm:flex-row sm:items-center sm:justify-between">
             <p>
-              Ãƒâ€šÃ‚Â© 2026 PLM College of Accountancy ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â BSA Alumni System
+              © 2026 PLM College of Accountancy — BSA Alumni System
             </p>
 
             <Link
