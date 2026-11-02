@@ -61,3 +61,8 @@ services:
       - type: rewrite
         source: /dashboard/events
         destination: /index.html
+      # Catch-all fallback for React Router deep links. Keep this last so
+      # real static files (assets, images, CSS, JS) are served normally.
+      - type: rewrite
+        source: /*
+        destination: /index.html
