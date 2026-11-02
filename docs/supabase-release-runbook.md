@@ -6,9 +6,26 @@ users, inspect migration history, or verify private RLS and Storage policy state
 Do not treat disposable PostgreSQL CI as evidence that production matches these
 migrations.
 
-## Current repository migration order
+## Repository migration order versus live migration history
 
-Apply migrations in timestamp order, after the base schema exists:
+The repository contains seven intended migrations, but their filenames are
+not a guarantee that the production migration ledger uses the same timestamps.
+The live project currently reports these five recorded versions:
+
+- `20261101190132 add_alumni_account_status`
+- `20261101190135 create_alumni_profile_on_invite`
+- `20261101190137 add_homepage_content_management`
+- `20261101190139 enforce_active_alumni_status`
+- `20261101190145 public_directory_and_batch_content`
+
+The repository sequence is represented by the files in
+`supabase/migrations/`; the live ledger is the authoritative record of what
+the project says was applied. Do **not** map versions by filename order alone,
+repair the ledger, or run `supabase db push` until the project owner reconciles
+the name/version differences and confirms the exact SQL already represented
+by each live migration.
+
+Repository migrations relevant to release:
 
 1. `20261030090000_add_alumni_account_status.sql`
 2. `20261031120000_create_alumni_profile_on_invite.sql`
@@ -18,22 +35,30 @@ Apply migrations in timestamp order, after the base schema exists:
 6. `20261031160000_public_directory_and_batch_content.sql`
 7. `20261102100000_enforce_admin_event_and_image_access.sql`
 
+Live inspection found that the following objects from repository migration 5
+are currently missing: `public.list_active_batch_members(integer)` and
+`public.set_alumni_account_status(uuid,text)`. Existing Storage credential
+policies do not match migration 5's definitions. The Storage buckets exist
+with the intended visibility (`alumni-credentials` private; `event-images`
+and `batch-images` public), but this does not prove migrations 5 or 7 were
+applied.
+
 Migration 5 depends on the base `profiles`, `credentials`, and `achievements`
 tables; the `alumni-credentials` bucket; `storage.objects`; Supabase's
 `storage.foldername(text)` and `auth.uid()` functions; and the authorization
-helpers from migration 4. Migration 5 installs credential object policies but
-does not change bucket visibility; migration 7 requires the credential bucket
-and makes it private. Missing bucket configuration is a hard failure.
+helpers from migration 4. It modifies Supabase-managed Storage policies and
+requires an authorized database owner.
 
-Migration 7 depends on the base `events` table, existing `event-images` and
-`batch-images` buckets, `storage.objects`, the public/admin batch policies from
-migration 6, and `public.is_account_admin()` from migration 4. It sets the
-image buckets public because public pages use their public URLs, then
-intersects legacy policies to restrict event, batch, and managed-image writes
-to admins, and ensures credential files cannot be accessed anonymously. It
-does not create buckets. Both migrations 5 and 7 modify
-Supabase-managed Storage tables and must run under an authorized
-database-owner role.
+Migration 7 depends on the base `events` table, the existing `event-images`
+and `batch-images` buckets, `storage.objects`, the batch policies from
+migration 6, and `public.is_account_admin()` from migration 4. Live inspection
+found no `events` SELECT policy. Migration 7 adds one and constrains event,
+batch, and managed-image writes to administrators. Do not treat matching bucket
+visibility alone as evidence that its policies were applied.
+
+The production migration ledger and actual schema differ from the repository's
+expected sequence. The owner must reconcile those differences against exact SQL
+before applying, manually repairing, or marking any migration as applied.
 
 ## Before applying anything
 
@@ -88,8 +113,9 @@ and [CLI migration repair reference](https://supabase.com/docs/reference/cli/sup
 
 ## Verify after applying
 
-1. Run `supabase migration list` and confirm versions 5, 6, and 7 appear as
-   applied (alongside earlier required migrations).
+1. Run `supabase migration list` and confirm the owner-reconciled versions
+   appear as applied. Do not assume repository migration numbers map to live
+   ledger timestamps.
 2. Re-run `docs/supabase-release-verification.sql` and confirm:
    - all required tables and columns are present;
    - `profiles`, `credentials`, `achievements`, `batches`, `events`,
@@ -101,9 +127,13 @@ and [CLI migration repair reference](https://supabase.com/docs/reference/cli/sup
    - credential rows and files are limited to their active owner or an admin;
    - active-alumni policies reject inactive accounts;
    - no unintended anon table write grants or permissive legacy policies remain.
-3. Review `audit_logs`: the repository base schema defines it, but current
-   migrations do not configure its RLS or policies. If the table exists or
-   will be used, design and review a separate policy migration before release.
+3. Review `events`, `achievements`, and `audit_logs`: live inspection found
+   RLS enabled with no policies on those tables. `events` requires public
+   SELECT for the public Events page and admin-only writes (covered in
+   migration 7). `achievements` and `audit_logs` are currently inaccessible
+   through normal API roles because they have no policies; decide their intended
+   owner/admin access model before designing a separate policy migration.
+   Do not add broad policies simply to clear the advisor.
 4. Run the disposable PostgreSQL SQL checks in CI; never run those fixture
    scripts against production.
 5. In staging, test public directory, batches, events, credential upload and
