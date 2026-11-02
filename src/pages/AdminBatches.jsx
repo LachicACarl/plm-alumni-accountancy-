@@ -38,17 +38,6 @@ function getPublicImageUrl(path) {
   return data?.publicUrl || "";
 }
 
-function formatDate(value) {
-  if (!value) return "—";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? value
-    : date.toLocaleDateString("en-PH", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
-}
 
 export default function AdminBatches() {
   const [batches, setBatches] = useState([]);
@@ -99,9 +88,6 @@ export default function AdminBatches() {
   }, [students, studentSearch, blockFilter]);
 
   async function loadBatches() {
-    setLoading(true);
-    setMessage("");
-
     const { data, error } = await supabase
       .from("batches")
       .select("*")
@@ -122,13 +108,7 @@ export default function AdminBatches() {
   }
 
   async function loadStudents(batchId = selectedBatchId) {
-    if (!batchId) {
-      setStudents([]);
-      return;
-    }
-
-    setStudentsLoading(true);
-    setStudentMessage("");
+    if (!batchId) return;
 
     const { data, error } = await supabase
       .from("batch_students")
