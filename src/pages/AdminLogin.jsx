@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { GraduationCap, LockKeyhole, ShieldCheck, UserRound } from "lucide-react";
-import { supabase } from "../lib/supabase";
+import { isSupabaseConfigured, supabase, supabaseConfigError } from "../lib/supabase";
 
 export default function AdminLogin() {
   const navigate = useNavigate();
@@ -169,6 +169,13 @@ export default function AdminLogin() {
               </p>
             </div>
 
+            {!isSupabaseConfigured && (
+              <div role="alert" className="mb-5 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                Admin sign-in is temporarily unavailable because the site is missing its Supabase configuration. Please contact the site administrator.
+                <span className="mt-2 block text-xs">{supabaseConfigError}</span>
+              </div>
+            )}
+
             <form
               onSubmit={showRecovery ? handleRecovery : handleLogin}
               className="rounded-2xl border border-[#ddd7c8] bg-white p-6 shadow-sm sm:p-8"
@@ -274,7 +281,7 @@ export default function AdminLogin() {
 
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || !isSupabaseConfigured}
                     className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#18392b] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#24513d] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <ShieldCheck size={18} />
