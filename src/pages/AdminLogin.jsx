@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { GraduationCap, LockKeyhole, ShieldCheck, UserRound } from "lucide-react";
 import { supabase } from "../lib/supabase";
@@ -48,22 +48,28 @@ export default function AdminLogin() {
         .eq("id", authData.user.id)
         .single();
 
-      if (profileError || !profile) {
-        await supabase.auth.signOut();
+      if (profileError) {
+        console.error("Admin profile lookup failed:", profileError);
         throw new Error(
-          "Administrator profile was not found. Please contact the system administrator."
+          "Your password was accepted, but we could not verify your administrator profile. Your session has been preserved. Please try again or contact the system administrator."
+        );
+      }
+
+      if (!profile) {
+        throw new Error(
+          "Your password was accepted, but no administrator profile is linked to this account. Your session has been preserved. Please contact the system administrator."
         );
       }
 
       if (!["admin", "head_admin"].includes(profile.role)) {
-        await supabase.auth.signOut();
         throw new Error(
-          "This account does not have administrator access."
+          "Your password was accepted, but this account does not have administrator access."
         );
       }
 
       navigate("/admin", { replace: true });
     } catch (loginError) {
+      console.error("Admin sign-in failed:", loginError);
       setError(
         loginError?.message ||
           "Unable to sign in. Please try again."
