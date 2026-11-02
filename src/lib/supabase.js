@@ -1,4 +1,4 @@
-﻿import { createClient } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
@@ -10,11 +10,11 @@ function getSupabaseConfigError() {
 
   try {
     const url = new URL(supabaseUrl);
-    if (!["http:", "https:"].includes(url.protocol) || !url.hostname) {
-      return "Invalid VITE_SUPABASE_URL. Set it to a valid HTTP or HTTPS Supabase project URL.";
+    if (!["http:", "https:"].includes(url.protocol) || !url.protocol.startsWith("https")) {
+      return "Invalid VITE_SUPABASE_URL. Set it to a valid HTTPS Supabase project URL.";
     }
   } catch {
-    return "Invalid VITE_SUPABASE_URL. Set it to a valid HTTP or HTTPS Supabase project URL.";
+    return "Invalid VITE_SUPABASE_URL. Set it to a valid HTTPS Supabase project URL.";
   }
 
   if (!supabaseAnonKey) {
@@ -24,10 +24,13 @@ function getSupabaseConfigError() {
   return null;
 }
 
-const configError = getSupabaseConfigError();
+// Missing build-time credentials must not crash module loading and leave the
+// entire React application blank. Keep the app renderable and surface the
+// configuration problem in the screens that require Supabase.
+export const supabaseConfigError = getSupabaseConfigError();
+export const isSupabaseConfigured = !supabaseConfigError;
 
-if (configError) {
-  throw new Error(`Supabase configuration error: ${configError}`);
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(
+  supabaseUrl || "https://configuration-missing.supabase.co",
+  supabaseAnonKey || "missing-supabase-anon-key"
+);
