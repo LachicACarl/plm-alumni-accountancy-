@@ -1,3 +1,6 @@
+# Render Blueprint for the existing PLM BSA Alumni static site.
+# This branch is based on integration/mainline-production-hardening.
+# Apply only after review and after confirming the service mapping in Render.
 services:
   - type: web
     name: plm-alumni-accountancy-
