@@ -1,4 +1,5 @@
 import { lazy, Suspense } from "react";
+import AdminLogin from "./pages/AdminLogin";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
@@ -9,7 +10,6 @@ const Events = lazy(() => import("./pages/Events"));
 const Alumni = lazy(() => import("./pages/Alumni"));
 const Login = lazy(() => import("./pages/Login"));
 const PasswordReset = lazy(() => import("./pages/PasswordReset"));
-const AdminLogin = lazy(() => import("./pages/AdminLogin"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Credentials = lazy(() => import("./pages/Credentials"));
