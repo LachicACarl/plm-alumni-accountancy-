@@ -1,29 +1,38 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Home from "./pages/Home";
-import Batches from "./pages/Batches";
-import Events from "./pages/Events";
-import Alumni from "./pages/Alumni";
-import Login from "./pages/Login";
-import PasswordReset from "./pages/PasswordReset";
-import AdminLogin from "./pages/AdminLogin";
-import Dashboard from "./pages/Dashboard";
-import Profile from "./pages/Profile";
-import Credentials from "./pages/Credentials";
-import Achievements from "./pages/Achievements";
-import Batch from "./pages/Batch";
-import DashboardEvents from "./pages/DashboardEvents";
-import AdminDashboard from "./pages/AdminDashboard";
-import AdminAlumni from "./pages/AdminAlumni";
-import AdminCredentials from "./pages/AdminCredentials";
-import AdminEvents from "./pages/AdminEvents";
-import AdminBatches from "./pages/AdminBatches";
-import AdminHomepage from "./pages/AdminHomepage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
+
+const Home = lazy(() => import("./pages/Home"));
+const Batches = lazy(() => import("./pages/Batches"));
+const Events = lazy(() => import("./pages/Events"));
+const Alumni = lazy(() => import("./pages/Alumni"));
+const Login = lazy(() => import("./pages/Login"));
+const PasswordReset = lazy(() => import("./pages/PasswordReset"));
+const AdminLogin = lazy(() => import("./pages/AdminLogin"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Credentials = lazy(() => import("./pages/Credentials"));
+const Achievements = lazy(() => import("./pages/Achievements"));
+const Batch = lazy(() => import("./pages/Batch"));
+const DashboardEvents = lazy(() => import("./pages/DashboardEvents"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const AdminAlumni = lazy(() => import("./pages/AdminAlumni"));
+const AdminCredentials = lazy(() => import("./pages/AdminCredentials"));
+const AdminEvents = lazy(() => import("./pages/AdminEvents"));
+const AdminBatches = lazy(() => import("./pages/AdminBatches"));
+const AdminHomepage = lazy(() => import("./pages/AdminHomepage"));
 
 export default function App() {
   return (
     <BrowserRouter>
+      <Suspense
+        fallback={
+          <div className="flex min-h-screen items-center justify-center bg-[#f7f5ee] text-sm text-[#18392b]" role="status">
+            Loading page...
+          </div>
+        }
+      >
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/batches" element={<Batches />} />
@@ -145,6 +154,7 @@ export default function App() {
         {/* Recover gracefully from malformed or unknown URLs. */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

@@ -37,7 +37,7 @@ export default function Batches() {
       try {
         const [batchResult, alumniRecords] = await Promise.all([
           supabase.from("batches").select("id, year, description, highlights, image_url").order("year", { ascending: false }),
-          fetchAllPublicAlumni(),
+          fetchAllPublicAlumni({ client: supabase }),
         ]);
 
         if (!active) return;

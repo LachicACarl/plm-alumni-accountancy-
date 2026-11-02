@@ -70,7 +70,7 @@ export default function AdminHomepage() {
 
   useEffect(() => {
     let active = true;
-    fetchAllPublicAlumni()
+    fetchAllPublicAlumni({ client: supabase })
       .then((alumniRecords) => {
         if (active) setAlumniOptions(alumniRecords);
       })

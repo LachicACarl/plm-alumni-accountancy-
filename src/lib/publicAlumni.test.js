@@ -53,6 +53,10 @@ describe("fetchAllPublicAlumni", () => {
     await assert.rejects(fetchAllPublicAlumni({ client }), (actual) => actual === error);
   });
 
+  test("requires an explicit Supabase client", async () => {
+    await assert.rejects(fetchAllPublicAlumni(), /Supabase client is required/);
+  });
+
   test("rejects invalid pagination settings", async () => {
     const client = createClient([]);
     await assert.rejects(fetchAllPublicAlumni({ pageSize: 0, client }), RangeError);

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import PublicLayout from "../layouts/PublicLayout";
 import { fetchAllPublicAlumni } from "../lib/publicAlumni";
+import { supabase } from "../lib/supabase";
 import plmCampus from "../assets/plm-campus.jpg";
 
 const safeImage = (value) =>
@@ -34,7 +35,7 @@ export default function Alumni() {
       setError("");
       let records;
       let requestError;
-      try { records = await fetchAllPublicAlumni(); } catch (caughtError) { requestError = caughtError; }
+      try { records = await fetchAllPublicAlumni({ client: supabase }); } catch (caughtError) { requestError = caughtError; }
 
       if (!active) return;
       if (requestError) {

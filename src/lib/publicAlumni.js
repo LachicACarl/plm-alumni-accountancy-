@@ -8,7 +8,11 @@ export async function fetchAllPublicAlumni({ pageSize = 500, maxPages = 100, cli
     throw new RangeError("maxPages must be a positive integer.");
   }
 
-  const api = client ?? (await import("./supabase.js")).supabase;
+  if (!client) {
+    throw new TypeError("A Supabase client is required to load public alumni.");
+  }
+
+  const api = client;
   const records = [];
   for (let page = 0; page < maxPages; page += 1) {
     const from = page * pageSize;
