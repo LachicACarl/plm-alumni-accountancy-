@@ -22,7 +22,8 @@ with required_migrations(version, migration_name) as (
     ('20261031140000', 'enforce_active_alumni_status'),
     ('20261031150000', 'enforce_active_alumni_resource_access'),
     ('20261031160000', 'public_directory_and_batch_content'),
-    ('20261102100000', 'enforce_admin_event_and_image_access')
+    ('20261102100000', 'enforce_admin_event_and_image_access'),
+    ('20261103120000', 'harden_is_admin_function')
 )
 select migration_name, version as expected_version
 from required_migrations
@@ -171,6 +172,7 @@ select
 with required_functions(signature) as (
   values
     ('public.get_public_alumni()'),
+    ('public.is_admin()'),
     ('public.is_active_alumni(uuid)'),
     ('public.is_account_admin(uuid)'),
     ('public.list_active_batch_members(integer)'),
@@ -209,6 +211,7 @@ from pg_proc procedure
 join pg_namespace namespace on namespace.oid = procedure.pronamespace
 where namespace.nspname = 'public'
   and procedure.proname in (
+    'is_admin',
     'is_active_alumni',
     'is_account_admin',
     'is_homepage_admin',

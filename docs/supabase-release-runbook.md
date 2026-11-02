@@ -8,7 +8,7 @@ migrations.
 
 ## Repository migration order versus live migration history
 
-The repository contains seven intended migrations, but their filenames are
+The repository contains eight intended migrations, but their filenames are
 not a guarantee that the production migration ledger uses the same timestamps.
 The live project currently reports these five recorded versions:
 
@@ -34,6 +34,7 @@ Repository migrations relevant to release:
 5. `20261031150000_enforce_active_alumni_resource_access.sql`
 6. `20261031160000_public_directory_and_batch_content.sql`
 7. `20261102100000_enforce_admin_event_and_image_access.sql`
+8. `20261103120000_harden_is_admin_function.sql`
 
 Live inspection found that the following objects from repository migration 5
 are currently missing: `public.list_active_batch_members(integer)` and
@@ -55,6 +56,14 @@ migration 6, and `public.is_account_admin()` from migration 4. Live inspection
 found no `events` SELECT policy. Migration 7 adds one and constrains event,
 batch, and managed-image writes to administrators. Do not treat matching bucket
 visibility alone as evidence that its policies were applied.
+
+Migration 8 hardens the existing `public.is_admin()` function by pinning its
+search path, declaring it `STABLE`, and restricting execution to
+`authenticated`. It depends on `public.profiles` and `auth.uid()`. It does not
+resolve the missing migration 5 functions or the Storage-policy mismatch; the
+owner must reconcile and test it with the rest of the live migration history.
+The recorded live-ledger snapshot above has no row for migration 8's filename
+timestamp, so its production application status remains unverified.
 
 The production migration ledger and actual schema differ from the repository's
 expected sequence. The owner must reconcile those differences against exact SQL
@@ -124,6 +133,8 @@ and [CLI migration repair reference](https://supabase.com/docs/reference/cli/sup
     are public, and anon cannot read credential objects;
    - the public alumni RPC returns only its approved columns;
    - admin write policies are restricted to admin/head-admin roles;
+   - `public.is_admin()` is present, `SECURITY DEFINER`, `STABLE`, has a pinned
+     search path, and is executable by `authenticated` but not `anon`;
    - credential rows and files are limited to their active owner or an admin;
    - active-alumni policies reject inactive accounts;
    - no unintended anon table write grants or permissive legacy policies remain.
