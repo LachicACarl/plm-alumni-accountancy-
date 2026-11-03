@@ -14,6 +14,7 @@ export default function AdminDashboard() {
   const [recentActivities, setRecentActivities] = useState([]);
   const [adminName, setAdminName] = useState("Admin User");
   const [userRole, setUserRole] = useState("");
+  const [roleResolved, setRoleResolved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [logoutError, setLogoutError] = useState("");
@@ -40,6 +41,7 @@ export default function AdminDashboard() {
         const role = profile?.role || "";
         if (mounted) {
           setUserRole(role);
+          setRoleResolved(true);
           setAdminName(`${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "Admin User");
         }
 
@@ -159,6 +161,10 @@ export default function AdminDashboard() {
     { label: "Pending Credentials", value: stats.pendingCredentials, description: "Requires review", icon: FileCheck2 },
     { label: "Active Events", value: stats.activeEvents, description: "Upcoming alumni activities", icon: CalendarDays },
   ].filter((stat) => !isOrg || stat.label === "Active Events");
+
+  if (!roleResolved && loading) {
+    return <div className="flex min-h-screen items-center justify-center bg-[#f7f5ee] text-sm font-semibold text-[#18392b]">Loading administration portal...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-[#f7f5ee] text-[#18392b]">
