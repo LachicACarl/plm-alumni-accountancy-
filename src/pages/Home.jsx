@@ -30,7 +30,7 @@ export default function Home() {
   const [content, setContent] = useState(defaults);
   useEffect(() => {
     let active = true;
-    supabase.from("homepage_content").select("content").eq("id", "main").maybeSingle()
+    supabase.from("homepage_content").select("content,is_published").eq("id", "main").eq("is_published", true).maybeSingle()
       .then(({ data, error }) => {
         if (!active || error || !data?.content) return;
         const saved = data.content;
@@ -45,6 +45,32 @@ export default function Home() {
           memories: Array.isArray(saved.memories) ? saved.memories.slice(0, 10) : defaults.memories,
         });
       }).catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    supabase
+      .from("events")
+      .select("id,title,description,event_date,image_url")
+      .gte("event_date", new Date().toISOString().slice(0, 10))
+      .order("event_date", { ascending: true })
+      .limit(3)
+      .then(({ data, error }) => {
+        if (!active || error || !data?.length) return;
+        setContent((current) => ({
+          ...current,
+          events: {
+            ...current.events,
+            items: data.map((event) => ({
+              title: event.title,
+              description: event.description || event.event_date || "",
+              image: event.image_url || "",
+            })),
+          },
+        }));
+      })
+      .catch(() => {});
     return () => { active = false; };
   }, []);
 

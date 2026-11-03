@@ -122,18 +122,46 @@ export default function AdminHomepage() {
     const validation = validate();
     if (validation) { setError(validation); setPreviewing(false); return; }
     setSaving(true); setError(""); setMessage("");
-    const { error: saveError } = await supabase.from("homepage_content").update({ content, is_published: true }).eq("id", "main");
-    if (saveError) setError(saveError.message);
-    else { setSavedContent(clone(content)); setIsPublished(true); setMessage("Homepage published successfully. The public homepage will load the updated content."); setPreviewing(false); }
-    setSaving(false);
+    try {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      const { data, error: saveError } = await supabase
+        .from("homepage_content")
+        .update({ content, is_published: true, updated_by: userData.user?.id || null })
+        .eq("id", "main")
+        .select("id")
+        .maybeSingle();
+      if (saveError) throw saveError;
+      if (!data) throw new Error("No homepage row was updated. Verify that the homepage row exists and that your account has Homepage Content permission.");
+      setSavedContent(clone(content));
+      setIsPublished(true);
+      setMessage("Homepage published successfully. The public homepage will load the updated content.");
+      setPreviewing(false);
+    } catch (saveError) {
+      setError(saveError.message || "Unable to publish homepage content.");
+    } finally {
+      setSaving(false);
+    }
   }
   async function unpublish() {
     if (!isPublished || !window.confirm("Unpublish the homepage? Visitors will see the built-in fallback content until you publish again.")) return;
     setSaving(true); setError(""); setMessage("");
-    const { error: unpublishError } = await supabase.from("homepage_content").update({ is_published: false }).eq("id", "main");
-    if (unpublishError) setError(unpublishError.message);
-    else { setIsPublished(false); setMessage("Homepage unpublished. Saved content is preserved and can be published again."); }
-    setSaving(false);
+    try {
+      const { data, error: unpublishError } = await supabase
+        .from("homepage_content")
+        .update({ is_published: false })
+        .eq("id", "main")
+        .select("id")
+        .maybeSingle();
+      if (unpublishError) throw unpublishError;
+      if (!data) throw new Error("No homepage row was updated. Verify Homepage Content permissions.");
+      setIsPublished(false);
+      setMessage("Homepage unpublished. Saved content is preserved and can be published again.");
+    } catch (unpublishError) {
+      setError(unpublishError.message || "Unable to unpublish homepage content.");
+    } finally {
+      setSaving(false);
+    }
   }
   function reset() { setContent(clone(savedContent)); setError(""); setMessage("Unsaved edits discarded."); setPreviewing(false); }
 
@@ -153,7 +181,7 @@ export default function AdminHomepage() {
           {message && <p role="status" className="rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-800">{message}</p>}
           <div className="sticky bottom-3 flex flex-wrap justify-end gap-2 rounded-xl border border-[#ddd8c9] bg-white/95 p-3 shadow-lg backdrop-blur"><span role="status" className={`mr-auto self-center text-sm font-semibold ${isPublished ? "text-green-800" : "text-amber-800"}`}>Homepage {isPublished ? "published" : "unpublished"}</span>{isPublished && <button type="button" onClick={unpublish} disabled={saving} className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-4 py-2.5 text-sm font-bold text-red-700 disabled:opacity-50">Unpublish</button>}<button type="button" onClick={reset} className="inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-bold"><RotateCcw size={15}/> Discard edits</button><button type="button" onClick={()=>{const problem=validate();if(problem){setError(problem);return;}setError("");setPreviewing(true);}} className="inline-flex items-center gap-2 rounded-lg bg-[#18392b] px-4 py-2.5 text-sm font-bold text-white"><Eye size={16}/> Preview before publish</button></div>
         </div>
-        <aside className="space-y-4 xl:sticky xl:top-5"><div className="rounded-2xl border border-[#ddd8c9] bg-white p-5"><h3 className="font-black">Homepage controls</h3><p className="mt-2 text-sm leading-6 text-[#68736b]">All homepage sections are editable here. Changes stay in this editor until you review the preview and choose Publish.</p><ul className="mt-3 space-y-2 text-sm text-[#536258]"><li>✓ Hero banner and background</li><li>✓ Statistics and featured events</li><li>✓ Alumni Spotlight</li><li>✓ Batch years and Memory Lane</li><li>✓ Footer and contact information</li></ul><Link to="/" className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-[#9b7819]"><Eye size={16}/> Open live homepage</Link></div><div className="rounded-2xl border border-[#ddd8c9] bg-white p-5"><h3 className="font-black">Publishing safeguards</h3><p className="mt-2 text-sm leading-6 text-[#68736b]">Only admin and head_admin accounts can save through database RLS. Public visitors have read-only access. Image URLs must be HTTPS. No file-storage bucket is required.</p></div></aside>
+        <aside className="space-y-4 xl:sticky xl:top-5"><div className="rounded-2xl border border-[#ddd8c9] bg-white p-5"><h3 className="font-black">Homepage controls</h3><p className="mt-2 text-sm leading-6 text-[#68736b]">All homepage sections are editable here. Changes stay in this editor until you review the preview and choose Publish.</p><ul className="mt-3 space-y-2 text-sm text-[#536258]"><li>✓ Hero banner and background</li><li>✓ Statistics and featured events</li><li>✓ Alumni Spotlight</li><li>✓ Batch years and Memory Lane</li><li>✓ Footer and contact information</li></ul><Link to="/" className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-[#9b7819]"><Eye size={16}/> Open live homepage</Link></div><div className="rounded-2xl border border-[#ddd8c9] bg-white p-5"><h3 className="font-black">Publishing safeguards</h3><p className="mt-2 text-sm leading-6 text-[#68736b]">Only authorized administrators and organization officers can save through database RLS. Public visitors have read-only access. Image URLs must be HTTPS. No file-storage bucket is required.</p></div></aside>
       </div>}
     </main>
     {previewing && <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 p-3 sm:p-8"><div className="mx-auto max-w-5xl rounded-2xl bg-[#f7f5ee] p-4 sm:p-6"><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-widest text-[#b28b1e]">Review changes</p><h2 className="text-xl font-black">Homepage preview</h2><p className="text-sm text-[#68736b]">This is a content preview. Check all text and images before publishing.</p></div><button type="button" onClick={()=>setPreviewing(false)} className="rounded-lg border bg-white px-3 py-2 text-sm font-bold"><Pencil size={14} className="mr-1 inline"/> Back to edit</button></div><Preview content={content}/><div className="mt-4 flex flex-wrap justify-end gap-2"><button type="button" onClick={()=>setPreviewing(false)} className="rounded-lg border bg-white px-4 py-2.5 text-sm font-bold">Continue editing</button><button type="button" onClick={publish} disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-[#18392b] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50"><Save size={16}/>{saving ? "Publishing..." : "Publish homepage changes"}</button></div>{error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}</div></div>}
