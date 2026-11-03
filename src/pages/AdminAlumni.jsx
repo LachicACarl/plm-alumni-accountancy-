@@ -14,6 +14,42 @@ import {
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
+function parseCsv(text) {
+  const rows = [];
+  let row = [], value = "", quoted = false;
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i], next = text[i + 1];
+    if (char === '"' && quoted && next === '"') { value += '"'; i += 1; }
+    else if (char === '"') quoted = !quoted;
+    else if (char === "," && !quoted) { row.push(value.trim()); value = ""; }
+    else if ((char === "\n" || char === "\r") && !quoted) {
+      if (char === "\r" && next === "\n") i += 1;
+      row.push(value.trim()); value = "";
+      if (row.some((cell) => cell !== "")) rows.push(row);
+      row = [];
+    } else value += char;
+  }
+  row.push(value.trim());
+  if (row.some((cell) => cell !== "")) rows.push(row);
+  if (rows.length < 2) throw new Error("The CSV needs a header row and at least one student.");
+  const headers = rows.shift().map((header) => header.toLowerCase().replace(/[\\s_-]+/g, ""));
+  const find = (...names) => headers.findIndex((header) => names.includes(header));
+  const nameIndex = find("fullname", "name", "studentname");
+  const numberIndex = find("studentnumber", "studentno", "studentid", "idnumber");
+  const blockIndex = find("block", "blocklabel", "section");
+  const statusIndex = find("status");
+  const cpaIndex = find("cpapassed", "cpa");
+  if (nameIndex < 0 || numberIndex < 0) throw new Error("Required columns: full_name and student_number. Download the CSV template for the correct format.");
+  return rows.map((cells, index) => ({
+    rowNumber: index + 2,
+    full_name: cells[nameIndex] || "",
+    student_number: cells[numberIndex] || "",
+    block_label: blockIndex >= 0 ? (cells[blockIndex] || "") : "",
+    status: statusIndex >= 0 ? (cells[statusIndex] || null) : null,
+    cpa_passed: cpaIndex >= 0 ? (cells[cpaIndex] || null) : null,
+  }));
+}
+
 export default function AdminAlumni() {
   const [alumniData, setAlumniData] = useState([]);
   const [batchOptions, setBatchOptions] = useState(["All"]);
@@ -25,6 +61,14 @@ export default function AdminAlumni() {
   const [selectedAlumni, setSelectedAlumni] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [updatingStatusId, setUpdatingStatusId] = useState(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFileName, setImportFileName] = useState("");
+  const [importRows, setImportRows] = useState([]);
+  const [importBatches, setImportBatches] = useState([]);
+  const [importBatchId, setImportBatchId] = useState("");
+  const [importBusy, setImportBusy] = useState(false);
+  const [importMessage, setImportMessage] = useState("");
+  const [importError, setImportError] = useState("");
 
   useEffect(() => {
     async function loadAlumni() {
@@ -206,7 +250,16 @@ export default function AdminAlumni() {
             </p>
           </div>
 
-          <button
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => { setShowImportModal(true); setImportError(""); setImportMessage(""); }}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#18392b] bg-white px-5 py-3 text-sm font-bold text-[#18392b] transition hover:bg-[#f7f5ee]"
+            >
+              <Plus size={18} />
+              Import Student Roster
+            </button>
+            <button
             type="button"
             onClick={() => setShowAddModal(true)}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#18392b] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#24513d]"
@@ -214,6 +267,7 @@ export default function AdminAlumni() {
             <Plus size={18} />
             Add Alumni
           </button>
+          </div>
         </div>
 
         {error && (
@@ -478,6 +532,106 @@ export default function AdminAlumni() {
           </div>
         </section>
 
+        {showImportModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#18392b]/60 px-4 py-6 backdrop-blur-sm" onClick={() => !importBusy && setShowImportModal(false)}>
+            <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-3xl border border-[#ddd7c8] bg-[#f7f5ee] shadow-2xl" onClick={(event) => event.stopPropagation()}>
+              <div className="bg-[#18392b] px-6 py-6 text-white">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#d4af37]">Alumni Management</p>
+                    <h2 className="mt-1 font-serif text-2xl font-bold">Import Student Roster</h2>
+                    <p className="mt-1 text-sm text-white/70">Upload a CSV spreadsheet, review the records, then import them into a selected batch.</p>
+                  </div>
+                  <button type="button" disabled={importBusy} onClick={() => setShowImportModal(false)} className="rounded-xl border border-white/10 px-3 py-2 text-sm font-bold text-white/70 hover:bg-white/10 disabled:opacity-50">Close</button>
+                </div>
+              </div>
+              <div className="space-y-5 p-6">
+                <div className="rounded-2xl border border-[#d8d2c2] bg-white p-4">
+                  <p className="text-sm font-bold text-[#18392b]">Important: roster import only</p>
+                  <p className="mt-1 text-xs leading-5 text-gray-500">This adds names and student numbers to <code>batch_students</code>. It does not create alumni login accounts or send invitation emails. Export Excel files as CSV before uploading. PDF and scanned documents are not importable in this version.</p>
+                  <a href="data:text/csv;charset=utf-8,full_name%2Cstudent_number%2Cblock_label%2Cstatus%2Ccpa_passed%0AJuan%20Dela%20Cruz%2C2026-00001%2C4A%2CGraduated%2CNo" download="plm-student-roster-template.csv" className="mt-3 inline-flex text-xs font-bold text-[#806612] underline">Download CSV template</a>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500">Target batch</span>
+                    <select value={importBatchId} onChange={(event) => setImportBatchId(event.target.value)} className="w-full rounded-xl border border-[#d8d2c2] bg-white px-4 py-3 text-sm" disabled={importBusy}>
+                      <option value="">Select a batch</option>
+                      {importBatches.map((item) => <option key={item.id} value={item.id}>BSA {item.year}</option>)}
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500">CSV file</span>
+                    <input type="file" accept=".csv,text/csv" disabled={importBusy} className="w-full rounded-xl border border-[#d8d2c2] bg-white px-3 py-2.5 text-sm" onChange={async (event) => {
+                      const file = event.target.files?.[0];
+                      setImportRows([]); setImportError(""); setImportMessage(""); setImportFileName(file?.name || "");
+                      if (!file) return;
+                      if (!file.name.toLowerCase().endsWith(".csv")) { setImportError("Please upload a .csv file. For Excel, use Save As → CSV UTF-8."); return; }
+                      try {
+                        const rows = parseCsv(await file.text());
+                        const seen = new Set();
+                        const normalized = rows.map((row) => {
+                          const key = row.student_number.trim().toLowerCase();
+                          const duplicateInFile = Boolean(key && seen.has(key));
+                          if (key) seen.add(key);
+                          return { ...row, duplicateInFile, invalid: !row.full_name.trim() || !key };
+                        });
+                        setImportRows(normalized);
+                      } catch (error) { setImportError(error.message || "Unable to read this CSV."); }
+                    }} />
+                  </label>
+                </div>
+                {importFileName && <p className="text-xs text-gray-500">Selected: {importFileName}</p>}
+                {importError && <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{importError}</p>}
+                {importMessage && <p className="rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-800">{importMessage}</p>}
+                {importRows.length > 0 && (
+                  <div className="overflow-hidden rounded-2xl border border-[#ddd7c8] bg-white">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e4dfd3] px-4 py-3">
+                      <div><p className="text-sm font-bold text-[#18392b]">Import preview</p><p className="text-xs text-gray-500">{importRows.length} rows · {importRows.filter((r) => !r.invalid && !r.duplicateInFile).length} ready · {importRows.filter((r) => r.invalid || r.duplicateInFile).length} need correction</p></div>
+                    </div>
+                    <div className="max-h-64 overflow-auto">
+                      <table className="w-full min-w-[650px] text-left text-xs">
+                        <thead className="sticky top-0 bg-[#f7f5ee] text-gray-500"><tr><th className="p-3">Row</th><th className="p-3">Student name</th><th className="p-3">Student number</th><th className="p-3">Block</th><th className="p-3">Validation</th></tr></thead>
+                        <tbody className="divide-y divide-[#eee9df]">{importRows.slice(0, 200).map((row) => <tr key={row.rowNumber}><td className="p-3">{row.rowNumber}</td><td className="p-3">{row.full_name || "—"}</td><td className="p-3">{row.student_number || "—"}</td><td className="p-3">{row.block_label || "Unassigned"}</td><td className="p-3 font-semibold">{row.invalid ? <span className="text-red-600">Missing name/number</span> : row.duplicateInFile ? <span className="text-red-600">Duplicate in file</span> : <span className="text-green-700">Ready</span>}</td></tr>)}</tbody>
+                      </table>
+                    </div>
+                    {importRows.length > 200 && <p className="p-3 text-xs text-gray-500">Showing first 200 rows. All valid rows will be considered for import.</p>}
+                  </div>
+                )}
+                <div className="flex flex-col-reverse gap-3 border-t border-[#ddd7c8] pt-5 sm:flex-row sm:justify-end">
+                  <button type="button" disabled={importBusy} onClick={() => setShowImportModal(false)} className="rounded-xl border border-[#d8d2c2] px-5 py-3 text-sm font-bold text-[#18392b] hover:bg-white">Cancel</button>
+                  <button type="button" disabled={importBusy || !importBatchId || !importRows.length || importRows.some((r) => r.invalid || r.duplicateInFile)} onClick={async () => {
+                    setImportBusy(true); setImportError(""); setImportMessage("");
+                    try {
+                      const numbers = [...new Set(importRows.map((r) => r.student_number.trim()))];
+                      const { data: existing, error: lookupError } = await supabase.from("batch_students").select("student_number").eq("batch_id", importBatchId).in("student_number", numbers);
+                      if (lookupError) throw lookupError;
+                      const existingSet = new Set((existing || []).map((r) => r.student_number.toLowerCase()));
+                      const duplicates = importRows.filter((r) => existingSet.has(r.student_number.trim().toLowerCase()));
+                      if (duplicates.length) throw new Error(duplicates.length + " student number(s) already exist in this batch. Remove or correct duplicates, then upload again.");
+                      const payload = importRows.map((r) => ({
+                        batch_id: importBatchId,
+                        full_name: r.full_name.trim(),
+                        student_number: r.student_number.trim(),
+                        block_label: r.block_label.trim() || "Unassigned",
+                        status: r.status?.trim() || null,
+                        cpa_passed: r.cpa_passed?.trim() || null,
+                      }));
+                      const { error: insertError } = await supabase.from("batch_students").insert(payload);
+                      if (insertError) throw insertError;
+                      setImportMessage("Successfully imported " + payload.length + " student roster records.");
+                      setImportRows([]);
+                      setImportFileName("");
+                    } catch (error) {
+                      setImportError(error.message || "Import failed. No success was reported.");
+                    } finally { setImportBusy(false); }
+                  }} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#18392b] px-5 py-3 text-sm font-bold text-white hover:bg-[#24513d] disabled:cursor-not-allowed disabled:opacity-50">
+                    {importBusy ? "Importing..." : "Confirm Import"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         {showAddModal && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-[#18392b]/60 px-4 py-6 backdrop-blur-sm"
