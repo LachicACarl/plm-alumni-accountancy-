@@ -7,6 +7,7 @@ on:
       - fix/admin-system-improvements
       - feature/admin-managed-public-content
       - integration/mainline-production-hardening
+      - fix/org-role-rbac-homepage-events
   pull_request:
     branches:
       - main
