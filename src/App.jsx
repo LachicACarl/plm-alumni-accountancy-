@@ -22,6 +22,7 @@ const AdminCredentials = lazy(() => import("./pages/AdminCredentials"));
 const AdminEvents = lazy(() => import("./pages/AdminEvents"));
 const AdminBatches = lazy(() => import("./pages/AdminBatches"));
 const AdminHomepage = lazy(() => import("./pages/AdminHomepage"));
+const AdminTruthLensReports = lazy(() => import("./pages/AdminTruthLensReports"));
 
 export default function App() {
   return (
@@ -111,6 +112,15 @@ export default function App() {
           element={
             <AdminProtectedRoute allowedRoles={["admin", "head_admin", "org"]}>
               <AdminHomepage />
+            </AdminProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/truthlens-reports"
+          element={
+            <AdminProtectedRoute allowedRoles={["admin", "head_admin"]}>
+              <AdminTruthLensReports />
             </AdminProtectedRoute>
           }
         />
