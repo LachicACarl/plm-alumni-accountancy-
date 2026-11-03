@@ -61,7 +61,7 @@ export default function AdminLogin() {
         );
       }
 
-      if (!["admin", "head_admin"].includes(profile.role)) {
+      if (!["admin", "head_admin", "org"].includes(profile.role)) {
         throw new Error(
           "Your password was accepted, but this account does not have administrator access."
         );
