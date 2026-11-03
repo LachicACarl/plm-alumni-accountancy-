@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, Navigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 
-export default function AdminProtectedRoute({ children }) {
+export default function AdminProtectedRoute({ children, allowedRoles = ["admin", "head_admin"] }) {\n  const location = useLocation();
   const [status, setStatus] = useState("checking");
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState("");\n  const [role, setRole] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -43,7 +43,7 @@ export default function AdminProtectedRoute({ children }) {
           return;
         }
 
-        if (!profile || !["admin", "head_admin"].includes(profile.role)) {
+        if (!profile || !["admin", "head_admin", "org"].includes(profile.role)) {
           if (active) {
             setStatus("unauthorized");
             setMessage("This account does not have administrator access.");
@@ -51,7 +51,7 @@ export default function AdminProtectedRoute({ children }) {
           return;
         }
 
-        if (active) setStatus("authorized");
+        if (active) { setRole(profile.role); setStatus("authorized"); }
       } catch (error) {
         console.error("Unable to verify administrator access:", error);
         if (active) {
@@ -123,5 +123,5 @@ export default function AdminProtectedRoute({ children }) {
     );
   }
 
-  return children;
+  if (!allowedRoles.includes(role)) {\n    return <Navigate to="/admin" replace state={{ from: location.pathname }} />;\n  }\n\n  return children;
 }
