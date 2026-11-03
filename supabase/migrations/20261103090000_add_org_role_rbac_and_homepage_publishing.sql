@@ -41,20 +41,6 @@ $$;
 revoke all on function private.has_admin_role() from public, anon;
 grant execute on function private.has_admin_role() to authenticated;
 
--- Preserve admin-only alumni batch and account management functions while
--- allowing organization event/homepage functions through a separate helper.
-create or replace function public.is_homepage_admin()
-returns boolean
-language sql
-stable
-security definer
-set search_path = ''
-as $
-  select private.has_content_management_role();
-$;
-revoke all on function public.is_homepage_admin() from public, anon;
-grant execute on function public.is_homepage_admin() to authenticated;
-
 -- Permit the new organization role while preserving the existing account roles.
 alter table public.profiles
   drop constraint if exists profiles_role_check;
