@@ -110,14 +110,12 @@ create policy "Homepage managers can insert content"
   on public.homepage_content for insert to authenticated
   with check (id = 'main' and (select private.has_content_management_role()));
 
--- Event image write operations are limited to org and admin roles. Public
--- delivery remains enabled on the existing event-images bucket.
+-- Event image reads stay public to serve image URLs. Organization officers and
+-- administrators may upload, replace, and delete files in event-images.
 drop policy if exists "Admins can upload event images" on storage.objects;
 drop policy if exists "Admins can update event images" on storage.objects;
 drop policy if exists "Admins can delete event images" on storage.objects;
-drop policy if exists "Admins can read event images" on storage.objects;
 drop policy if exists "Public can read event images" on storage.objects;
-drop policy if exists "Organization and administrators read event images" on storage.objects;
 create policy "Public can read event images"
   on storage.objects for select to anon, authenticated
   using (bucket_id = 'event-images');
