@@ -32,14 +32,24 @@ function parseCsv(text) {
   row.push(value.trim());
   if (row.some((cell) => cell !== "")) rows.push(row);
   if (rows.length < 2) throw new Error("The CSV needs a header row and at least one student.");
-  const headers = rows.shift().map((header) => header.toLowerCase().replace(/[\\s_-]+/g, ""));
+  const rawHeaders = rows.shift();
+  const headers = rawHeaders.map((header) =>
+    header.replace(/^\uFEFF/, "").trim().replace(/^["']|["']$/g, "").toLowerCase().replace(/[\s_-]+/g, "")
+  );
   const find = (...names) => headers.findIndex((header) => names.includes(header));
   const nameIndex = find("fullname", "name", "studentname");
   const numberIndex = find("studentnumber", "studentno", "studentid", "idnumber");
   const blockIndex = find("block", "blocklabel", "section");
   const statusIndex = find("status");
   const cpaIndex = find("cpapassed", "cpa");
-  if (nameIndex < 0 || numberIndex < 0) throw new Error("Required columns: full_name and student_number. Download the CSV template for the correct format.");
+  if (nameIndex < 0 || numberIndex < 0) {
+    const detected = rawHeaders.map((header) => header.replace(/^\uFEFF/, "").trim()).filter(Boolean);
+    throw new Error(
+      "This file does not look like a student roster. Required columns: full_name and student_number. " +
+      "Detected columns: " + (detected.join(", ") || "none") +
+      ". Use the Download CSV template, or rename your columns to Full Name and Student Number."
+    );
+  }
   return rows.map((cells, index) => ({
     rowNumber: index + 2,
     full_name: cells[nameIndex] || "",
