@@ -122,18 +122,46 @@ export default function AdminHomepage() {
     const validation = validate();
     if (validation) { setError(validation); setPreviewing(false); return; }
     setSaving(true); setError(""); setMessage("");
-    const { error: saveError } = await supabase.from("homepage_content").update({ content, is_published: true }).eq("id", "main");
-    if (saveError) setError(saveError.message);
-    else { setSavedContent(clone(content)); setIsPublished(true); setMessage("Homepage published successfully. The public homepage will load the updated content."); setPreviewing(false); }
-    setSaving(false);
+    try {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      const { data, error: saveError } = await supabase
+        .from("homepage_content")
+        .update({ content, is_published: true, updated_by: userData.user?.id || null })
+        .eq("id", "main")
+        .select("id")
+        .maybeSingle();
+      if (saveError) throw saveError;
+      if (!data) throw new Error("No homepage row was updated. Verify that the homepage row exists and that your account has Homepage Content permission.");
+      setSavedContent(clone(content));
+      setIsPublished(true);
+      setMessage("Homepage published successfully. The public homepage will load the updated content.");
+      setPreviewing(false);
+    } catch (saveError) {
+      setError(saveError.message || "Unable to publish homepage content.");
+    } finally {
+      setSaving(false);
+    }
   }
   async function unpublish() {
     if (!isPublished || !window.confirm("Unpublish the homepage? Visitors will see the built-in fallback content until you publish again.")) return;
     setSaving(true); setError(""); setMessage("");
-    const { error: unpublishError } = await supabase.from("homepage_content").update({ is_published: false }).eq("id", "main");
-    if (unpublishError) setError(unpublishError.message);
-    else { setIsPublished(false); setMessage("Homepage unpublished. Saved content is preserved and can be published again."); }
-    setSaving(false);
+    try {
+      const { data, error: unpublishError } = await supabase
+        .from("homepage_content")
+        .update({ is_published: false })
+        .eq("id", "main")
+        .select("id")
+        .maybeSingle();
+      if (unpublishError) throw unpublishError;
+      if (!data) throw new Error("No homepage row was updated. Verify Homepage Content permissions.");
+      setIsPublished(false);
+      setMessage("Homepage unpublished. Saved content is preserved and can be published again.");
+    } catch (unpublishError) {
+      setError(unpublishError.message || "Unable to unpublish homepage content.");
+    } finally {
+      setSaving(false);
+    }
   }
   function reset() { setContent(clone(savedContent)); setError(""); setMessage("Unsaved edits discarded."); setPreviewing(false); }
 
