@@ -53,7 +53,7 @@ export default function AdminCredentials() {
         const { data, error: credentialsError } = await supabase
           .from("credentials")
           .select(
-            "id, profile_id, credential_type, file_url, status, created_at, profiles(first_name, middle_name, last_name, student_number)"
+            "id, profile_id, credential_type, file_url, status, created_at, profiles!credentials_profile_id_fkey(first_name, middle_name, last_name, student_number)"
           )
           .order("created_at", { ascending: false })
           .range(rangeStart, rangeStart + CREDENTIAL_PAGE_SIZE - 1);
