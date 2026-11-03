@@ -89,6 +89,13 @@ create policy "Homepage managers can update content"
 drop policy if exists "Admins can upload event images" on storage.objects;
 drop policy if exists "Admins can update event images" on storage.objects;
 drop policy if exists "Admins can delete event images" on storage.objects;
+drop policy if exists "Admins can read event images" on storage.objects;
+drop policy if exists "Public can read event images" on storage.objects;
+drop policy if exists "Organization and administrators read event images" on storage.objects;
+create policy "Public can read event images"
+  on storage.objects for select to anon, authenticated
+  using (bucket_id = 'event-images');
+
 drop policy if exists "Organization and administrators upload event images" on storage.objects;
 drop policy if exists "Organization and administrators update event images" on storage.objects;
 drop policy if exists "Organization and administrators delete event images" on storage.objects;
