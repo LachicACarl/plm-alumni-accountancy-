@@ -41,6 +41,13 @@ $$;
 revoke all on function private.has_admin_role() from public, anon;
 grant execute on function private.has_admin_role() to authenticated;
 
+-- Permit the new organization role while preserving the existing account roles.
+alter table public.profiles
+  drop constraint if exists profiles_role_check;
+alter table public.profiles
+  add constraint profiles_role_check
+  check (role = any (array['alumni'::text, 'admin'::text, 'head_admin'::text, 'org'::text]));
+
 alter table public.homepage_content
   add column if not exists is_published boolean not null default true;
 
