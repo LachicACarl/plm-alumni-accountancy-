@@ -121,6 +121,29 @@ export default function AdminAlumni() {
     loadAlumni();
   }, []);
 
+  useEffect(() => {
+    async function loadImportBatches() {
+      const { data, error: batchesError } = await supabase
+        .from("batches")
+        .select("id, year")
+        .order("year", { ascending: false });
+
+      if (batchesError) {
+        setImportError("Unable to load batches: " + batchesError.message);
+        return;
+      }
+
+      const availableBatches = data ?? [];
+      setImportBatches(availableBatches);
+      setImportBatchId((current) => current || availableBatches[0]?.id || "");
+      if (availableBatches.length === 0) {
+        setImportError("No batches are available. Create a batch before importing a student roster.");
+      }
+    }
+
+    loadImportBatches();
+  }, []);
+
   const filteredAlumni = useMemo(() => {
     return alumniData.filter((alumni) => {
       const searchValue = search.toLowerCase().trim();
