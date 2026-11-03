@@ -1,8 +1,9 @@
 -- RBAC for organization officers and homepage publishing.
 -- Review and apply explicitly; this file is not applied to the connected production database.
 
--- Keep role helpers in a non-exposed schema and execute as the caller.
--- The profiles self-read policy lets each user inspect only their own role row.
+-- Role membership is read through the user's own profile row.
+-- Keep the helpers INVOKER so they do not bypass RLS. The caller must have
+-- SELECT on only their own profile row; do not grant broader profile access here.
 create schema if not exists private;
 revoke all on schema private from public, anon, authenticated;
 grant usage on schema private to authenticated;
@@ -14,12 +15,11 @@ stable
 security invoker
 set search_path = ''
 as $$
-  select exists (
-    select 1
-    from public.profiles
-    where id = (select auth.uid())
-      and role in ('org', 'admin', 'head_admin')
-  );
+  select coalesce((
+    select p.role in ('org', 'admin', 'head_admin')
+    from public.profiles as p
+    where p.id = (select auth.uid())
+  ), false);
 $$;
 revoke all on function private.has_content_management_role() from public, anon;
 grant execute on function private.has_content_management_role() to authenticated;
@@ -31,12 +31,11 @@ stable
 security invoker
 set search_path = ''
 as $$
-  select exists (
-    select 1
-    from public.profiles
-    where id = (select auth.uid())
-      and role in ('admin', 'head_admin')
-  );
+  select coalesce((
+    select p.role in ('admin', 'head_admin')
+    from public.profiles as p
+    where p.id = (select auth.uid())
+  ), false);
 $$;
 revoke all on function private.has_admin_role() from public, anon;
 grant execute on function private.has_admin_role() to authenticated;
