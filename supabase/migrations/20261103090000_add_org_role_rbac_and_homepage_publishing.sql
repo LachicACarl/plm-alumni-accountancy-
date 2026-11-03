@@ -40,6 +40,16 @@ $$;
 revoke all on function private.has_admin_role() from public, anon;
 grant execute on function private.has_admin_role() to authenticated;
 
+-- Remove org accounts from profile-wide administrator read predicates.
+-- Organization access is limited to the content tables defined below.
+drop policy if exists "Active alumni or admins can read profiles" on public.profiles;
+create policy "Active alumni can read own profile"
+  on public.profiles for select to authenticated
+  using (id = (select auth.uid()) and role = 'alumni' and account_status = 'active');
+
+-- Retain the existing admin-only profile policy; do not grant org profile browsing.
+-- Existing own-profile SELECT policy remains in place.
+
 -- Permit the new organization role while preserving the existing account roles.
 alter table public.profiles
   drop constraint if exists profiles_role_check;
