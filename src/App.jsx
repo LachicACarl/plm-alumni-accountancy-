@@ -100,7 +100,7 @@ export default function App() {
         <Route
           path="/admin"
           element={
-            <AdminProtectedRoute>
+            <AdminProtectedRoute allowedRoles={["admin", "head_admin", "org"]}>
               <AdminDashboard />
             </AdminProtectedRoute>
           }
