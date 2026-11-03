@@ -15,16 +15,41 @@ export default function AdminProtectedRoute({
 
     async function checkAccess() {
       try {
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
+        // Resolve the persisted session before asking Auth to verify the user.
+        // getUser() by itself can throw AuthSessionMissingError when no session
+        // has been restored (for example, after a fresh tab or expired session).
+        const { data: sessionData, error: sessionError } =
+          await supabase.auth.getSession();
 
-        if (userError) throw userError;
+        if (sessionError) throw sessionError;
+
+        if (!sessionData?.session) {
+          if (active) {
+            setStatus("unauthenticated");
+            setMessage("Your administrator session is missing or has expired. Please sign in again.");
+          }
+          return;
+        }
+
+        const { data: userData, error: userError } =
+          await supabase.auth.getUser();
+
+        if (userError) {
+          if (userError.name === "AuthSessionMissingError") {
+            if (active) {
+              setStatus("unauthenticated");
+              setMessage("Your administrator session has expired. Please sign in again.");
+            }
+            return;
+          }
+          throw userError;
+        }
+
+        const user = userData?.user;
         if (!user) {
           if (active) {
             setStatus("unauthenticated");
-            setMessage("Your session has expired. Please sign in again.");
+            setMessage("Your administrator session has expired. Please sign in again.");
           }
           return;
         }
