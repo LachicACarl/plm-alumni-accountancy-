@@ -1,8 +1,8 @@
 -- RBAC for organization officers and homepage publishing.
 -- Review and apply explicitly; this file is not applied to the connected production database.
 
--- Keep the role authorization logic in a non-exposed schema. SECURITY DEFINER is
--- restricted to this internal helper and EXECUTE is granted only to authenticated.
+-- Keep role helpers in a non-exposed schema and execute as the caller.
+-- The profiles self-read policy lets each user inspect only their own role row.
 create schema if not exists private;
 revoke all on schema private from public, anon, authenticated;
 grant usage on schema private to authenticated;
@@ -11,7 +11,7 @@ create or replace function private.has_content_management_role()
 returns boolean
 language sql
 stable
-security definer
+security invoker
 set search_path = ''
 as $$
   select exists (
@@ -28,7 +28,7 @@ create or replace function private.has_admin_role()
 returns boolean
 language sql
 stable
-security definer
+security invoker
 set search_path = ''
 as $$
   select exists (
@@ -102,9 +102,10 @@ drop policy if exists "Admins can upload event images" on storage.objects;
 drop policy if exists "Admins can update event images" on storage.objects;
 drop policy if exists "Admins can delete event images" on storage.objects;
 drop policy if exists "Public can read event images" on storage.objects;
-create policy "Public can read event images"
-  on storage.objects for select to anon, authenticated
-  using (bucket_id = 'event-images');
+drop policy if exists "Organization and administrators read event images" on storage.objects;
+create policy "Organization and administrators read event images"
+  on storage.objects for select to authenticated
+  using (bucket_id = 'event-images' and (select private.has_content_management_role()));
 
 drop policy if exists "Organization and administrators upload event images" on storage.objects;
 drop policy if exists "Organization and administrators update event images" on storage.objects;
