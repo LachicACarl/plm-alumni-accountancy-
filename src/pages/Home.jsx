@@ -48,6 +48,32 @@ export default function Home() {
     return () => { active = false; };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    supabase
+      .from("events")
+      .select("id,title,description,event_date,image_url")
+      .gte("event_date", new Date().toISOString().slice(0, 10))
+      .order("event_date", { ascending: true })
+      .limit(3)
+      .then(({ data, error }) => {
+        if (!active || error || !data?.length) return;
+        setContent((current) => ({
+          ...current,
+          events: {
+            ...current.events,
+            items: data.map((event) => ({
+              title: event.title,
+              description: event.description || event.event_date || "",
+              image: event.image_url || "",
+            })),
+          },
+        }));
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
   const { hero, events, spotlight, footer } = content;
   const titleParts = safeText(hero.title, defaults.hero.title).split(" ");
   const campusImage = safeImage(hero.campusImage, plmCampus);
