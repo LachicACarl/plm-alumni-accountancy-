@@ -105,6 +105,11 @@ create policy "Homepage managers can update content"
   using (id = 'main' and (select private.has_content_management_role()))
   with check (id = 'main' and (select private.has_content_management_role()));
 
+-- Allow content editors to create the singleton row only if it does not exist.
+create policy "Homepage managers can insert content"
+  on public.homepage_content for insert to authenticated
+  with check (id = 'main' and (select private.has_content_management_role()));
+
 -- Event image write operations are limited to org and admin roles. Public
 -- delivery remains enabled on the existing event-images bucket.
 drop policy if exists "Admins can upload event images" on storage.objects;
