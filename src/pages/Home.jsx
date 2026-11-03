@@ -30,7 +30,7 @@ export default function Home() {
   const [content, setContent] = useState(defaults);
   useEffect(() => {
     let active = true;
-    supabase.from("homepage_content").select("content").eq("id", "main").maybeSingle()
+    supabase.from("homepage_content").select("content,is_published").eq("id", "main").eq("is_published", true).maybeSingle()
       .then(({ data, error }) => {
         if (!active || error || !data?.content) return;
         const saved = data.content;
