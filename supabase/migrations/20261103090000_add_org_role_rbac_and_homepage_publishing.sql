@@ -1,8 +1,9 @@
 -- RBAC for organization officers and homepage publishing.
 -- Review and apply explicitly; this file is not applied to the connected production database.
 
--- Keep the role authorization logic in a non-exposed schema. SECURITY DEFINER is
--- restricted to this internal helper and EXECUTE is granted only to authenticated.
+-- Role membership is read through the user's own profile row.
+-- Keep the helpers INVOKER so they do not bypass RLS. The caller must have
+-- SELECT on only their own profile row; do not grant broader profile access here.
 create schema if not exists private;
 revoke all on schema private from public, anon, authenticated;
 grant usage on schema private to authenticated;
@@ -11,15 +12,14 @@ create or replace function private.has_content_management_role()
 returns boolean
 language sql
 stable
-security definer
+security invoker
 set search_path = ''
 as $$
-  select exists (
-    select 1
-    from public.profiles
-    where id = (select auth.uid())
-      and role in ('org', 'admin', 'head_admin')
-  );
+  select coalesce((
+    select p.role in ('org', 'admin', 'head_admin')
+    from public.profiles as p
+    where p.id = (select auth.uid())
+  ), false);
 $$;
 revoke all on function private.has_content_management_role() from public, anon;
 grant execute on function private.has_content_management_role() to authenticated;
@@ -28,18 +28,27 @@ create or replace function private.has_admin_role()
 returns boolean
 language sql
 stable
-security definer
+security invoker
 set search_path = ''
 as $$
-  select exists (
-    select 1
-    from public.profiles
-    where id = (select auth.uid())
-      and role in ('admin', 'head_admin')
-  );
+  select coalesce((
+    select p.role in ('admin', 'head_admin')
+    from public.profiles as p
+    where p.id = (select auth.uid())
+  ), false);
 $$;
 revoke all on function private.has_admin_role() from public, anon;
 grant execute on function private.has_admin_role() to authenticated;
+
+-- Remove org accounts from profile-wide administrator read predicates.
+-- Organization access is limited to the content tables defined below.
+drop policy if exists "Active alumni or admins can read profiles" on public.profiles;
+create policy "Active alumni can read own profile"
+  on public.profiles for select to authenticated
+  using (id = (select auth.uid()) and role = 'alumni' and account_status = 'active');
+
+-- Retain the existing admin-only profile policy; do not grant org profile browsing.
+-- Existing own-profile SELECT policy remains in place.
 
 -- Permit the new organization role while preserving the existing account roles.
 alter table public.profiles
@@ -102,9 +111,10 @@ drop policy if exists "Admins can upload event images" on storage.objects;
 drop policy if exists "Admins can update event images" on storage.objects;
 drop policy if exists "Admins can delete event images" on storage.objects;
 drop policy if exists "Public can read event images" on storage.objects;
-create policy "Public can read event images"
-  on storage.objects for select to anon, authenticated
-  using (bucket_id = 'event-images');
+drop policy if exists "Organization and administrators read event images" on storage.objects;
+create policy "Organization and administrators read event images"
+  on storage.objects for select to authenticated
+  using (bucket_id = 'event-images' and (select private.has_content_management_role()));
 
 drop policy if exists "Organization and administrators upload event images" on storage.objects;
 drop policy if exists "Organization and administrators update event images" on storage.objects;
