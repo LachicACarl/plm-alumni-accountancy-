@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  ArrowRight, FileCheck2, GraduationCap, ShieldCheck, Users,
+  ArrowRight, FileCheck2, GraduationCap, ShieldCheck, Users, FileSpreadsheet,
   CalendarDays, Activity, Database, ExternalLink, LogOut, PanelsTopLeft,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
@@ -130,6 +130,11 @@ export default function AdminDashboard() {
       title: "Homepage Content",
       description: "Manage the public homepage banner, featured content, images, and footer.",
       count: "Edit", label: "Website Content", icon: PanelsTopLeft, path: "/admin/homepage",
+    },
+    {
+      title: "TruthLens Reports",
+      description: "Import and review TruthLens CSV analysis reports separately from alumni records.",
+      count: "Import", label: "Analysis Reports", icon: FileSpreadsheet, path: "/admin/truthlens-reports",
     },
     {
       title: "Alumni Management",
