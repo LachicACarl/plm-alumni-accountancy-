@@ -52,7 +52,7 @@ export default function Home() {
     let active = true;
     supabase
       .from("events")
-      .select("id,title,description,event_date,image_url")
+      .select("id,title,description,event_date,image_url,facebook_post_url")
       .gte("event_date", new Date().toISOString().slice(0, 10))
       .order("event_date", { ascending: true })
       .limit(3)
@@ -66,6 +66,7 @@ export default function Home() {
               title: event.title,
               description: event.description || event.event_date || "",
               image: event.image_url || "",
+              facebookPostUrl: event.facebook_post_url || "",
             })),
           },
         }));
@@ -111,7 +112,7 @@ export default function Home() {
               <Link to="/events" className="mt-6 inline-flex w-fit items-center gap-3 rounded-lg bg-gradient-to-r from-[#e8c458] to-[#76ad78] px-5 py-3 font-serif text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">View All Events <ArrowRight size={17}/></Link>
             </div>
             <div className="grid gap-5 sm:grid-cols-3">
-              {events.items.map((event, index) => <article key={index} className="overflow-hidden rounded-lg border border-[#40453f] bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"><div className="h-[190px] overflow-hidden sm:h-[175px]"><FallbackImage src={safeImage(event.image, eventImage)} fallback={eventImage} alt={safeText(event.title, "BSA event")} className="h-full w-full object-cover transition duration-500 hover:scale-105"/></div><div className="p-4"><h3 className="font-serif text-sm font-bold text-[#30493b]">{safeText(event.title)}</h3><p className="mt-2 font-serif text-xs leading-5 text-[#555a55]">{safeText(event.description)}</p></div></article>)}
+              {events.items.map((event, index) => <article key={index} className="overflow-hidden rounded-lg border border-[#40453f] bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"><div className="h-[190px] overflow-hidden sm:h-[175px]"><FallbackImage src={safeImage(event.image, eventImage)} fallback={eventImage} alt={safeText(event.title, "BSA event")} className="h-full w-full object-cover transition duration-500 hover:scale-105"/></div><div className="p-4"><h3 className="font-serif text-sm font-bold text-[#30493b]">{safeText(event.title)}</h3><p className="mt-2 font-serif text-xs leading-5 text-[#555a55]">{safeText(event.description)}</p>{typeof event.facebookPostUrl === "string" && /^https:\/\/([a-z0-9-]+\.)*facebook\.com\/|^https:\/\/fb\.watch\//i.test(event.facebookPostUrl) && <a href={event.facebookPostUrl} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex text-xs font-bold text-[#315f45] underline underline-offset-4">View Facebook Post <ArrowRight size={13}/></a>}</div></article>)}
             </div>
           </div>
         </section>

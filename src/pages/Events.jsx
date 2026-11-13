@@ -184,6 +184,18 @@ export default function Events() {
                         {event.description || "Join us for this PLM BSA alumni event."}
                       </p>
 
+                      {typeof event.facebook_post_url === "string" &&
+                        /^https:\/\/([a-z0-9-]+\.)*facebook\.com\/|^https:\/\/fb\.watch\//i.test(event.facebook_post_url) && (
+                          <a
+                            href={event.facebook_post_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-[#315f45] underline underline-offset-4"
+                          >
+                            View Facebook Post <ArrowRight size={14} />
+                          </a>
+                        )}
+
                     </div>
                   </article>
                 ))
