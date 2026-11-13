@@ -25,6 +25,7 @@ const emptyForm = {
   end_time: "",
   location: "",
   image_url: "",
+  facebook_post_url: "",
 };
 
 export default function AdminEvents() {
@@ -113,6 +114,7 @@ export default function AdminEvents() {
       end_time: event.end_time ?? "",
       location: event.location ?? "",
       image_url: event.image_url ?? "",
+      facebook_post_url: event.facebook_post_url ?? "",
     });
     setImageFile(null);
     setImagePreview(event.image_url ?? "");
@@ -180,6 +182,30 @@ export default function AdminEvents() {
         throw new Error("Event date is required.");
       }
 
+      let facebookPostUrl = form.facebook_post_url.trim();
+
+      if (facebookPostUrl) {
+        let parsedFacebookUrl;
+
+        try {
+          parsedFacebookUrl = new URL(facebookPostUrl);
+        } catch {
+          throw new Error("Enter a valid Facebook post URL.");
+        }
+
+        const hostname = parsedFacebookUrl.hostname.toLowerCase();
+        const isFacebookHost =
+          hostname === "facebook.com" ||
+          hostname.endsWith(".facebook.com") ||
+          hostname === "fb.watch";
+
+        if (parsedFacebookUrl.protocol !== "https:" || !isFacebookHost) {
+          throw new Error("Use a valid HTTPS Facebook post URL.");
+        }
+
+        facebookPostUrl = parsedFacebookUrl.toString();
+      }
+
       let imageUrl = form.image_url || null;
 
       if (imageFile) {
@@ -194,6 +220,7 @@ export default function AdminEvents() {
         end_time: form.end_time || null,
         location: form.location.trim() || null,
         image_url: imageUrl,
+        facebook_post_url: facebookPostUrl || null,
       };
 
       if (editingId) {
@@ -469,6 +496,28 @@ export default function AdminEvents() {
                   className="mt-1.5 w-full rounded-xl border border-[#d8ddd6] px-4 py-3 text-sm outline-none focus:border-[#b79a3b]"
                   placeholder="PLM College of Accountancy"
                 />
+              </div>
+
+              <div>
+                <label htmlFor="facebook-post-url" className="text-xs font-bold text-[#315f45]">
+                  Facebook Post URL
+                </label>
+                <input
+                  id="facebook-post-url"
+                  type="url"
+                  value={form.facebook_post_url}
+                  onChange={(e) =>
+                    setForm((current) => ({
+                      ...current,
+                      facebook_post_url: e.target.value,
+                    }))
+                  }
+                  className="mt-1.5 w-full rounded-xl border border-[#d8ddd6] px-4 py-3 text-sm outline-none focus:border-[#b79a3b]"
+                  placeholder="https://www.facebook.com/..."
+                />
+                <p className="mt-1.5 text-[11px] text-[#7a837d]">
+                  Paste the link to the published Facebook post. Optional.
+                </p>
               </div>
 
               <div>
